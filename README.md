@@ -35,6 +35,21 @@ git clone https://github.com/saksham-eng560/vivekanand.git && cd vivekanand
 ./start.sh
 ```
 
+#### ActivityWatch setup (optional)
+
+Without ActivityWatch the backend uses sample data. To track real activity:
+
+1. Download ActivityWatch from https://activitywatch.net/downloads/ and unzip it anywhere, e.g. `~/Downloads/activitywatch` or `/Applications/activitywatch` (or install `ActivityWatch.app`; it is found automatically, its Rust server lives in `Contents/Frameworks`, and `AW_HOME=/Applications/ActivityWatch.app` also works). The Python `aw-server` is used only if no Rust server exists anywhere, because it does not support `cors_regex` (the extension would be blocked). If it lives somewhere else, `export AW_HOME=/path/to/activitywatch` (the folder containing `aw-server-rust/`, `aw-watcher-window/`, `aw-watcher-afk/`; pointing at the server binary also works). If `AW_HOME` contains no server, `./start.sh` prints a warning, ignores it and uses the next install it finds (it does not fail). Only a local `AW_SERVER_URL` (localhost/127.0.0.1/::1) makes `./start.sh` start a server or watchers.
+2. Run `./start.sh`. If ActivityWatch is not already running it searches `AW_HOME`, `PATH`, `/Applications/ActivityWatch.app`, `~/Applications/ActivityWatch.app`, `~/Downloads/activitywatch`, `~/activitywatch`, `/Applications/activitywatch` and `~/Applications/activitywatch`, then starts `aw-server-rust` plus `aw-watcher-window` and `aw-watcher-afk` itself. You do **not** need the `aw-qt` tray app. If you installed `/Applications/ActivityWatch.app`, just open it: `./start.sh` detects it on `:5600` and does not start its own server. `./stop.sh` stops them (watchers first). Use `--no-aw-watchers` to start only the server. If ActivityWatch is already running from another launcher (e.g. aw-qt), watchers are not started unless you pass `--aw-watchers`, which may then duplicate watchers that are already running.
+3. If macOS kills the downloaded binaries (exit 137 / "did not come up"), clear the quarantine flag yourself: `xattr -dr com.apple.quarantine ~/Downloads/activitywatch` (use your actual folder).
+4. Let the extension write to ActivityWatch by adding this line to `~/Library/Application Support/activitywatch/aw-server-rust/config.toml` (macOS) or `~/.config/activitywatch/aw-server-rust/config.toml` (Linux), then restart aw-server (`./stop.sh && ./start.sh`). `./start.sh` checks this and prints the line if it is missing; it never edits the file:
+   ```toml
+   cors_regex = ["chrome-extension://edaacbpplacmlbfilkabahkcmhopmpdj"]
+   ```
+5. The first time the watchers run, macOS asks for **Accessibility** permission (window watcher) and **Input Monitoring** (AFK watcher). Grant them in System Settings -> Privacy & Security for the app you launch `./start.sh` from (Terminal/iTerm), then re-run `./start.sh`. Re-running restarts our watchers only when `./start.sh` owns the server; if ActivityWatch.app / aw-qt runs it, that app's own watchers are used.
+
+   **What the watchers record (privacy):** `aw-watcher-window` records the active application and its full window titles; `aw-watcher-afk` records whether you are active or idle at the keyboard/mouse. Both are on by default, are stored only in the local aw-server database (macOS: `~/Library/Application Support/activitywatch/aw-server-rust/`, Linux: `~/.local/share/activitywatch/aw-server-rust/`), and never leave your machine. The data **persists after `./stop.sh`**. Disable with `./start.sh --no-aw-watchers`. To delete it, run `./stop.sh` and remove that folder (or delete buckets in the ActivityWatch UI at http://localhost:5600).
+
 After `./start.sh` completes, your browser will open the dashboard at http://localhost:3000. Then:
 
 ### Load the Extension
@@ -63,8 +78,8 @@ These scripts automate setup, startup, and testing. All are idempotent. They nee
 | Script | What it does | Key flags | Example |
 |--------|-------------|-----------|---------|
 | `./setup.sh` | One-time install: checks Node/Python, installs deps, pulls the LLM model, builds the extension. Idempotent—safe to run multiple times. | `--dev` (also install test deps), `--skip-model` (don't pull LLM), `--with-env` (copy `.env.example` to `.env`), `-h/--help` | `./setup.sh --dev --with-env` |
-| `./start.sh` | Runs setup if needed; starts Ollama (if installed), aw-server (only if installed), backend, and dashboard. Waits for services to be healthy, then prints a summary and opens the dashboard. Ctrl+C stops all services. | `--detach`/`-d` (run in background; use `./stop.sh` to stop), `--no-open` (don't open dashboard in browser), `--fix-ollama` (macOS only; see below), `-y/--yes` (skip the `--fix-ollama` prompt; required without a TTY), `-h/--help` | `./start.sh -d`, `./start.sh --fix-ollama` |
-| `./stop.sh` | Stops anything recorded in `.run/*.pid` (dashboard, backend, aw-server, ollama). A pid is only signalled if it is still the process that was started (command and start time are checked); otherwise the pid file is treated as stale and removed. Does nothing if there are no pid files. | (none) | `./stop.sh` |
+| `./start.sh` | Runs setup if needed; starts Ollama (if installed), ActivityWatch (`aw-server-rust` plus the window and AFK watchers, if a download/install is found; see [ActivityWatch setup](#activitywatch-setup-optional)), backend, and dashboard. Waits for services to be healthy, then prints a summary and opens the dashboard. Ctrl+C stops all services. | `--detach`/`-d` (run in background; use `./stop.sh` to stop), `--no-open` (don't open dashboard in browser), `--fix-ollama` (macOS only; see below), `-y/--yes` (skip the `--fix-ollama` prompt; required without a TTY), `--no-aw-watchers` (start only the ActivityWatch server), `--aw-watchers` (also start the watchers when ActivityWatch was already running; only needed when ActivityWatch.app / aw-qt owns the server; may duplicate watchers it already runs), `-h/--help` | `./start.sh -d`, `./start.sh --fix-ollama`, `AW_HOME=~/aw ./start.sh --no-aw-watchers` |
+| `./stop.sh` | Stops anything recorded in `.run/*.pid` (dashboard, backend, aw-watcher-window, aw-watcher-afk, aw-server, ollama; watchers are stopped before the server). A pid is only signalled if it is still the process that was started (command and start time are checked); otherwise the pid file is treated as stale and removed. Does nothing if there are no pid files. | (none) | `./stop.sh` |
 | `./test.sh` | Runs all three test suites (extension, backend, dashboard) and shows a pass/fail table. Needs `./setup.sh` (use `--dev`) run first; it only auto-installs the backend test dependencies if `pytest` is missing. | `--build` (also run both `npm run build`s, after the tests), `-h/--help` | `./test.sh --build` |
 
 **`--fix-ollama` (macOS only)** has side effects, so it prints its plan and the matching `ollama serve` processes and asks `[y/N]` (pass `--yes` to skip; without a TTY `--yes` is required). It: (1) runs `launchctl setenv OLLAMA_ORIGINS "chrome-extension://*"`, which stays set for all apps until you log out, reboot or unset it, (2) quits the Ollama app, (3) stops any `ollama serve` process still running afterwards, (4) relaunches Ollama. Undo with `launchctl unsetenv OLLAMA_ORIGINS`. It only applies to a local Ollama: if `OLLAMA_URL` points to another host, it exits non-zero without changing anything (and `start.sh` never starts a local `ollama serve` for a remote URL).
@@ -72,11 +87,12 @@ These scripts automate setup, startup, and testing. All are idempotent. They nee
 Environment overrides (export them in your shell; the scripts do not read `.env` files for these):
 - `LLM_MODEL` – `./setup.sh`: pulls this model **and** builds the extension with it (`VITE_LLM_MODEL`). `./start.sh`: passed to the backend only if set; otherwise the backend uses `pulse-backend/.env` or its default (`qwen3.5:4b`). `./test.sh --build` also builds the extension with it when set. Use the same value for all scripts.
 - `BACKEND_PORT` (default 8000), `DASHBOARD_PORT` (default 3000) – `./start.sh` only.
+- `AW_HOME` – directory containing the `aw-server-rust/`, `aw-watcher-window/` and `aw-watcher-afk/` folders (or an `ActivityWatch.app/Contents/MacOS` dir); checked first when `./start.sh` looks for ActivityWatch.
 - `OLLAMA_URL` (default `http://localhost:11434`), `AW_SERVER_URL` (default `http://localhost:5600`) – used by the scripts' readiness probes (and `OLLAMA_URL` also sets `OLLAMA_HOST` for the `ollama` commands the scripts run); the backend itself reads its own `pulse-backend/.env`.
 
 The first run downloads the model (several GB; this can take minutes).
 
-Logs are written to `.run/logs/` (backend.log, dashboard.log, ollama.log) and `.run/<name>.pid` files (pid plus start time) track running services.
+Logs are written to `.run/logs/` (backend.log, dashboard.log, ollama.log, aw-server.log, aw-watcher-window.log, aw-watcher-afk.log) and `.run/<name>.pid` files (pid plus start time) track running services.
 
 ---
 
@@ -348,7 +364,7 @@ ollama pull qwen3.5:4b
 # macOS: ~/Library/Application Support/activitywatch/aw-server-rust/config.toml
 # Linux: ~/.config/activitywatch/aw-server-rust/config.toml
 # Add this line:
-#   cors_regex = "chrome-extension://.*"
+#   cors_regex = ["chrome-extension://edaacbpplacmlbfilkabahkcmhopmpdj"]
 # Then restart aw-server
 ```
 
@@ -533,6 +549,17 @@ cd ../dashboard && npm run typecheck
   - On **macOS**: Run `./start.sh --fix-ollama` (asks for confirmation; sets a persistent `launchctl` variable, restarts Ollama; undo: `launchctl unsetenv OLLAMA_ORIGINS`)
   - Manually: Set `OLLAMA_ORIGINS="chrome-extension://*"` and restart the Ollama app
 
+**aw-qt crashes with a segmentation fault on macOS 26+/27?**
+- This only affects running `aw-qt` from an unpacked (non-`.app`) folder. The proper `/Applications/ActivityWatch.app` works (including its tray): open it and `./start.sh` will detect it on `:5600`.
+- Otherwise `aw-qt` segfaults at startup when run from an unpacked folder. It is not needed for Lighthouse: `./start.sh` runs `aw-server-rust` and the watchers directly. Do not launch `aw-qt`.
+
+**ActivityWatch not found / killed / extension can't write to it?**
+- Set `AW_HOME` to the unpacked folder, or unzip to `~/Downloads/activitywatch` or `/Applications/activitywatch`.
+- If the server is killed immediately (exit 137), run `xattr -dr com.apple.quarantine <folder>`.
+- **`cors_regex` must be a list.** Writing it as a plain quoted string (no brackets) makes aw-server-rust 0.14 fail with `invalid type: string, expected a sequence`; `./start.sh` warns when it finds the string form (it never edits the file). Use `["..."]` with brackets.
+- If `./start.sh` reports the extension origin is rejected, add `cors_regex = ["chrome-extension://edaacbpplacmlbfilkabahkcmhopmpdj"]` to the aw-server-rust `config.toml` (macOS: `~/Library/Application Support/activitywatch/aw-server-rust/config.toml`, Linux: `~/.config/activitywatch/aw-server-rust/config.toml`) and restart.
+- Watchers not recording? Grant Accessibility (window watcher) and Input Monitoring (AFK watcher) to your terminal app in System Settings -> Privacy & Security, then restart. Check `.run/logs/aw-watcher-*.log`.
+
 **Python version too old?**
 - Install `uv` (fastest package manager): `curl -LsSf https://astral.sh/uv/install.sh | sh`
 - Then `./setup.sh` will use `uv` to create a Python 3.11 venv automatically
@@ -546,6 +573,7 @@ cd ../dashboard && npm run typecheck
 - `.run/logs/backend.log` – FastAPI server logs
 - `.run/logs/dashboard.log` – React dev server logs
 - `.run/logs/ollama.log` – Ollama server logs
+- `.run/logs/aw-server.log`, `aw-watcher-window.log`, `aw-watcher-afk.log` – ActivityWatch processes started by `./start.sh`
 - Watch in real-time: `tail -f .run/logs/backend.log`
 
 ### Extension Offline Modes

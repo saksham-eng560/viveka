@@ -3,10 +3,11 @@
 set -euo pipefail
 . "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/scripts/lib.sh"
 
-DETACH=0; OPEN=1; FIX_OLLAMA=0; YES=0
+DETACH=0; OPEN=1; FIX_OLLAMA=0; YES=0; AW_WATCHERS=auto   # auto | yes | no
 usage() {
   cat <<USAGE
-Usage: ./start.sh [--detach|-d] [--no-open] [--fix-ollama [-y|--yes]] [-h|--help]
+Usage: ./start.sh [--detach|-d] [--no-open] [--fix-ollama [-y|--yes]]
+                   [--aw-watchers|--no-aw-watchers] [-h|--help]
 
   -d, --detach    start services and return; stop later with ./stop.sh
   --no-open       do not open the dashboard in a browser
@@ -14,7 +15,19 @@ Usage: ./start.sh [--detach|-d] [--no-open] [--fix-ollama [-y|--yes]] [-h|--help
                   Ollama app, stop running "ollama serve" processes, relaunch Ollama.
                   Asks [y/N] first. Undo: launchctl unsetenv OLLAMA_ORIGINS
   -y, --yes       answer yes to the --fix-ollama prompt (required without a TTY)
+  --aw-watchers   also start the ActivityWatch window/AFK watchers when ActivityWatch
+                  was already running (default: only when the server was started by
+                  ./start.sh, now or earlier). May duplicate watchers if ActivityWatch.app /
+                  aw-qt (or another launcher) already runs them.
+  --no-aw-watchers  never start the window/AFK watchers (they record the active app, full
+                  window titles and input-activity state into the local aw-server database)
   -h, --help      show this help
+
+ActivityWatch: if nothing answers on AW_SERVER_URL, ./start.sh looks for an install
+(AW_HOME, PATH, /Applications/ActivityWatch.app, ~/Downloads/activitywatch, ~/activitywatch,
+/Applications/activitywatch, ~/Applications/activitywatch) and starts aw-server-rust plus
+aw-watcher-window and aw-watcher-afk itself (no aw-qt needed). Only for a local
+AW_SERVER_URL. An AW_HOME without a server is warned about and ignored (next candidate used).
 
 --fix-ollama and the local "ollama serve" start only apply to a local Ollama; they are
 refused/skipped when OLLAMA_URL points at another host.
@@ -24,6 +37,9 @@ Env (export in your shell; not read from .env files by this script):
   LLM_MODEL        backend model; only passed to the backend if set
                    (otherwise pulse-backend/.env or the built-in $DEFAULT_MODEL applies)
   BACKEND_PORT (default 8000), DASHBOARD_PORT (default 3000)
+  AW_HOME          directory holding the aw-server-rust/, aw-watcher-window/, aw-watcher-afk/
+                   folders (or an ActivityWatch.app, its Contents/MacOS dir, or the server binary
+                   itself); checked first
   OLLAMA_URL (default http://localhost:11434), AW_SERVER_URL (default http://localhost:5600)
                    used for the readiness probes here; the backend reads its own .env
 USAGE
@@ -32,6 +48,7 @@ for a in "$@"; do
   case "$a" in
     -d|--detach) DETACH=1 ;; --no-open) OPEN=0 ;; --fix-ollama) FIX_OLLAMA=1 ;;
     -y|--yes) YES=1 ;;
+    --aw-watchers) AW_WATCHERS=yes ;; --no-aw-watchers) AW_WATCHERS=no ;;
     -h|--help) usage; exit 0 ;;
     *) usage >&2; die "Unknown option: $a" ;;
   esac
@@ -80,7 +97,11 @@ check_cors() {
 
 STARTED_NOW=""   # services started by this invocation (failure cleanup only touches these)
 started() { STARTED_NOW="$STARTED_NOW $1"; }
-stop_started() { local n; for n in $STARTED_NOW; do stop_service "$n"; done; }
+stop_started() { # reverse start order: watchers/dashboard before the server they talk to
+  local n list=""
+  for n in $STARTED_NOW; do list="$n $list"; done
+  for n in $list; do stop_service "$n"; done
+}
 
 # ollama_serve_pids: pids of processes whose executable is ollama and that run "serve"
 ollama_serve_pids() {
@@ -156,20 +177,143 @@ else
 fi
 
 # ---- ActivityWatch --------------------------------------------------------------
-AW_STATE="not running"
+AW_STATE="not running"; AW_BIN=""; AW_DIR=""; AW_CORS="unknown"; AW_WATCHER_STATE="not started"
+AW_PORT="${AW_URL#*://}"; AW_PORT="${AW_PORT%%/*}"
+case "$AW_PORT" in *:*) AW_PORT="${AW_PORT##*:}" ;; *) AW_PORT=5600 ;; esac
+case "$AW_PORT" in ''|*[!0-9]*) AW_PORT=5600 ;; esac
+AW_STARTED=0   # 1 when aw-server is ours (started now, or by an earlier ./start.sh run)
+AW_REMOTE=0
+if ! aw_is_local "$AW_URL"; then AW_REMOTE=1; fi
+AW_HOME_CHECKED=0
+
+aw_data_dir() {
+  if [ "$(uname -s)" = "Darwin" ]; then echo "$HOME/Library/Application Support/activitywatch/aw-server-rust/"
+  else echo "$HOME/.local/share/activitywatch/aw-server-rust/"; fi
+}
+
+aw_cors_config_path() {
+  if [ "$(uname -s)" = "Darwin" ]; then echo "$HOME/Library/Application Support/activitywatch/aw-server-rust/config.toml"
+  else echo "$HOME/.config/activitywatch/aw-server-rust/config.toml"; fi
+}
+
+# hint_cors_regex_string: aw-server-rust 0.14 needs cors_regex to be a list; a string breaks it
+hint_cors_regex_string() {
+  local f; f="$(aw_cors_config_path)"
+  [ -f "$f" ] || return 0
+  if grep -Eq '^[[:space:]]*cors_regex[[:space:]]*=[[:space:]]*"' "$f" 2>/dev/null; then
+    warn "$f has cors_regex as a string; aw-server-rust needs a LIST (otherwise: invalid type: string, expected a sequence). Change it to (not edited automatically):"
+    warn "  cors_regex = [\"$ORIGIN\"]"
+  fi
+}
+
+check_aw_cors() {
+  local code
+  code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 -X OPTIONS \
+    -H "Origin: $ORIGIN" -H "Access-Control-Request-Method: POST" \
+    "$AW_URL/api/0/buckets/aw-watcher-web-lighthouse/heartbeat" 2>/dev/null || true)"
+  case "$code" in
+    2??) AW_CORS="ok"; ok "ActivityWatch accepts the extension origin (extension CORS: ok)" ;;
+    *) AW_CORS="blocked"
+       warn "ActivityWatch rejected the extension origin (HTTP ${code:-none}); the extension cannot write to ActivityWatch."
+       warn "Add this line to $(aw_cors_config_path) and restart aw-server:"
+       warn "  cors_regex = [\"$ORIGIN\"]" ;;
+  esac
+}
+
+aw_hint_quarantine() { # aw_hint_quarantine <bin> <dir>
+  if has_quarantine "$1" || has_quarantine "$2"; then
+    warn "macOS quarantine is set on the ActivityWatch download and may be killing it (exit 137). Clear it (not done automatically):"
+    warn "  xattr -dr com.apple.quarantine \"$2\""
+  fi
+}
+
+start_aw_watcher() { # start_aw_watcher <name>
+  local name="$1" bin
+  if service_running "$name"; then info "$name already running (pid $(read_pid "$name"))"; return 0; fi
+  bin="$(aw_find_bin "$AW_DIR" "$name" || true)"
+  if [ -z "$bin" ]; then warn "$name not found in ${AW_DIR:-PATH}; skipping"; return 0; fi
+  info "Starting $name"
+  start_bg_supervised "$name" "$ROOT_DIR" "$bin" --port "$AW_PORT"
+  started "$name"
+}
+
+# warn_bad_aw_home: once, when AW_HOME is set but yields no server; names the fallback
+warn_bad_aw_home() { # warn_bad_aw_home <fallback dir or empty>
+  [ "$AW_HOME_CHECKED" -eq 0 ] || return 0
+  AW_HOME_CHECKED=1
+  [ -n "${AW_HOME:-}" ] || return 0
+  aw_resolve_home >/dev/null && return 0
+  if [ -n "${1:-}" ]; then
+    warn "AW_HOME ($AW_HOME) contains no ActivityWatch server (aw-server-rust/aw-server); IGNORING it and using $1 instead."
+  else
+    warn "AW_HOME ($AW_HOME) contains no ActivityWatch server (aw-server-rust/aw-server); ignoring it and no other install was found."
+  fi
+}
+
 if http_ok "$AW_URL/api/0/info"; then
   AW_STATE="running"; ok "ActivityWatch reachable at $AW_URL"
+  if service_running aw-server; then AW_STARTED=1; AW_STATE="running (started by an earlier ./start.sh)"; fi
+elif [ "$AW_REMOTE" -eq 1 ]; then
+  warn "ActivityWatch not reachable at $AW_URL (non-local host; not starting a local server or watchers). The backend will use sample data."
+  AW_STATE="unreachable (remote)"
 else
-  AW_BIN=""
-  for c in aw-server-rust aw-server; do have "$c" && { AW_BIN="$c"; break; }; done
-  if [ -n "$AW_BIN" ]; then
-    info "Starting $AW_BIN"
-    start_bg aw-server "$ROOT_DIR" "$AW_BIN"
-    started aw-server
-    if wait_for_http "$AW_URL/api/0/info" 20; then AW_STATE="started by start.sh"; else warn "$AW_BIN did not come up"; AW_STATE="failed to start"; stop_service aw-server; fi
+  AW_DIR="$(find_activitywatch_dir || true)"
+  warn_bad_aw_home "${AW_DIR:-}"
+  if [ -n "$AW_DIR" ]; then
+    AW_BIN="$(aw_bin_in_dir "$AW_DIR" aw-server-rust || aw_bin_in_dir "$AW_DIR" aw-server || true)"
   else
-    info "ActivityWatch not found; the backend will use sample data (this is fine for a demo)."
+    for c in aw-server-rust aw-server; do have "$c" && { AW_BIN="$(command -v "$c")"; break; }; done
   fi
+  if [ -n "$AW_BIN" ]; then
+    case "$(basename "$AW_BIN")" in
+      aw-server) warn "Only the Python aw-server was found ($AW_BIN); it does not support cors_regex, so the Lighthouse extension may be blocked. Install aw-server-rust (the official ActivityWatch.app/download includes it)." ;;
+    esac
+    info "Found ActivityWatch: ${AW_DIR:-PATH} (server: $AW_BIN)"
+    info "Starting $(basename "$AW_BIN")"
+    start_bg aw-server "$ROOT_DIR" "$AW_BIN" --port "$AW_PORT"
+    started aw-server
+    if wait_for_http "$AW_URL/api/0/info" 20; then
+      AW_STATE="started by start.sh"; AW_STARTED=1
+    else
+      warn "$(basename "$AW_BIN") did not come up (see .run/logs/aw-server.log)"
+      [ -f "$LOG_DIR/aw-server.log" ] && tail -n 10 "$LOG_DIR/aw-server.log" >&2
+      aw_hint_quarantine "$AW_BIN" "${AW_DIR:-$(dirname "$AW_BIN")}"
+      hint_cors_regex_string
+      AW_STATE="failed to start"; stop_service aw-server
+    fi
+  else
+    hint_cors_regex_string
+    info "ActivityWatch not found (set AW_HOME, or unzip it to ~/Downloads/activitywatch or /Applications); the backend will use sample data (this is fine for a demo)."
+  fi
+fi
+
+if [ "$AW_REMOTE" -eq 0 ] && { [ "${AW_STATE#running}" != "$AW_STATE" ] || [ "$AW_STARTED" -eq 1 ]; }; then
+  check_aw_cors
+  want_watchers=0
+  case "$AW_WATCHERS" in yes) want_watchers=1 ;; auto) [ "$AW_STARTED" -eq 1 ] && want_watchers=1 ;; esac
+  if [ "$want_watchers" -eq 1 ]; then
+    [ -n "$AW_DIR" ] || AW_DIR="$(find_activitywatch_dir || true)"
+    warn_bad_aw_home "${AW_DIR:-}"
+    start_aw_watcher aw-watcher-window
+    start_aw_watcher aw-watcher-afk
+    # aw-watcher-afk exits ~10s after startup if it lost its parent, so wait past that
+    # window and check the watcher process itself (not just its keeper shell).
+    case "$STARTED_NOW" in *aw-watcher*) info "Verifying watchers stay up (12s)"; sleep 12 ;; esac
+    AW_WATCHER_STATE=""
+    for w in aw-watcher-window aw-watcher-afk; do
+      if service_running "$w" && supervised_child_alive "$w"; then AW_WATCHER_STATE="$AW_WATCHER_STATE $w=running"
+      else
+        AW_WATCHER_STATE="$AW_WATCHER_STATE $w=not running"
+        if [ -f "$LOG_DIR/$w.log" ]; then warn "$w is not running; last log lines:"; tail -n 5 "$LOG_DIR/$w.log" >&2; fi
+        stop_service "$w"
+      fi
+    done
+    AW_WATCHER_STATE="${AW_WATCHER_STATE# }"
+    info "Watchers record the active app, full window titles and input-activity (AFK) state into the local aw-server database ($(aw_data_dir)); nothing leaves this machine. Disable: --no-aw-watchers."
+    info "macOS will ask for Accessibility permission (window watcher) and Input Monitoring (afk watcher) the first time."
+  elif [ "$AW_WATCHERS" = "no" ]; then AW_WATCHER_STATE="disabled (--no-aw-watchers)"
+  else AW_WATCHER_STATE="not started (ActivityWatch was already running; use --aw-watchers)"; fi
+elif [ "$AW_REMOTE" -eq 1 ]; then AW_WATCHER_STATE="not started (non-local AW_SERVER_URL)"
 fi
 
 # ---- backend + dashboard --------------------------------------------------------
@@ -198,7 +342,7 @@ else
   start_bg backend "$BACKEND_DIR" .venv/bin/uvicorn main:app --host 127.0.0.1 --port "$BACKEND_PORT"
   started backend
 fi
-wait_for_http "http://127.0.0.1:$BACKEND_PORT/api/health" 30 || fail_start backend "Backend did not become healthy within 30s"
+wait_for_http "http://127.0.0.1:$BACKEND_PORT/api/health" 30 8 || fail_start backend "Backend did not become healthy within 30s"
 ok "Backend healthy"
 
 export VITE_API_URL="http://localhost:$BACKEND_PORT"
@@ -230,7 +374,9 @@ line "Dashboard : http://localhost:$DASHBOARD_PORT"
 line "API docs  : http://localhost:$BACKEND_PORT/docs"
 line "Health    : $HEALTH_LINE"
 line "Ollama    : $OLLAMA_STATE; extension CORS: $CORS_STATE"
-line "ActivityWatch: $AW_STATE$([ "$AW_STATE" = "not running" ] && echo ' (backend uses sample data)')"
+line "ActivityWatch: $AW_STATE$([ "$AW_STATE" = "not running" ] && echo ' (backend uses sample data)')${AW_BIN:+; binary: $AW_BIN}; extension CORS: $AW_CORS"
+line "AW watchers : $AW_WATCHER_STATE"
+line "  (macOS asks for Accessibility / Input Monitoring permission on first run)"
 line ""
 line "Load the extension:"
 line "  1. Open chrome://extensions and enable Developer mode"
@@ -238,7 +384,7 @@ line "  2. Load unpacked -> $EXT_DIR/dist"
 line "     (extension ID: $EXTENSION_ID)"
 line "  3. Click the Lighthouse icon -> Open side panel; toggle Demo mode"
 line ""
-line "Logs: $LOG_DIR/{backend,dashboard,ollama}.log"
+line "Logs: $LOG_DIR/{backend,dashboard,ollama,aw-server,aw-watcher-window,aw-watcher-afk}.log"
 if [ "$DETACH" -eq 1 ]; then line "Stop with: ./stop.sh"; else line "Press Ctrl+C to stop everything"; fi
 printf '%s%s%s\n\n' "$C_BOLD" "$bar" "$C_RESET"
 
