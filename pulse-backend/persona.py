@@ -30,19 +30,19 @@ PERSONA = (
 TEMPLATES: dict[str, list[str]] = {
     "greeting": [
         "Namaste, {name}! 🙏 I'm Sheru. Today we chase: {goal}. I'll sit right here.",
-        "Hi {name}! Paws folded, turban on. Ready for {goal}?",
+        "Hi {name}! Paws folded, turban on. Today's mission: {goal}.",
         "Namaste {name}! A lion cub reporting for duty. First up: {goal}.",
     ],
     "distraction1": [
-        "Psst, {name}! {label} is cute, but {goal} is cuter. Shall we hop back?",
-        "Tiny paw tap 🐾 {label} isn't on today's plan. {goal} is waiting!",
+        "Psst, {name}! {label} is cute, but your goals are cuter. Shall we hop back?",
+        "Tiny paw tap 🐾 {label} isn't on today's plan. Your goal is waiting: {goal}.",
         "Hey {name}, I spotted {label}. Lions chase goals, not feeds!",
-        "Rawr-ning! {label} has been nibbling your focus for {minutes}. Back to {goal}?",
-        "Ooh, {label}. I peeked too! Now let's both go back to {goal}.",
+        "Rawr-ning! {label} has been nibbling your focus for {minutes}. Back to it?",
+        "Ooh, {label}. I peeked too! Now let's both get back to work.",
     ],
     "distraction2": [
         "Okay {name}, {minutes} on {label}. Swamiji said 'Arise, awake!' That includes the scroll thumb.",
-        "I'm not mad, just a little lion-sad 🥺 {minutes} on {label}. One small step back to {goal}?",
+        "I'm not mad, just a little lion-sad 🥺 {minutes} on {label}. One small step back to work?",
         "{name}, we've wandered into {label} for {minutes}. You're a lion, not a sheep! Back we go?",
         "Still on {label}? Let's make a deal: close it now, and I'll cheer the loudest when you're back.",
     ],
@@ -62,7 +62,7 @@ TEMPLATES: dict[str, list[str]] = {
         "Hmm, we're distracted, aren't we? {minutes} of quiet in {label}. Let's pick ONE small next step.",
     ],
     "back": [
-        "Yay, back to {goal}! 🦁",
+        "Yay, back on track! 🦁",
         "That's my lion! Welcome back.",
         "Focus mode: ON. Proud of you, {name}.",
         "And we're back! The sheep could never.",
@@ -73,7 +73,7 @@ TEMPLATES: dict[str, list[str]] = {
         "Yes! Momentum is back.",
     ],
     "away_back": [
-        "Welcome back, {name}! Ready to pick {goal} back up?",
+        "Welcome back, {name}! Ready to pick up where we left off?",
         "Oh hi! I kept your seat warm. Shall we continue?",
     ],
     "break_start": [
@@ -81,12 +81,12 @@ TEMPLATES: dict[str, list[str]] = {
         "Break time! {minutes} of rest. Lions nap too, you know.",
     ],
     "break_end": [
-        "Break's over, {name}! Let's ease back into {goal}.",
-        "Ding! Break done. One gentle step back into {goal}?",
+        "Break's over, {name}! Let's ease back in.",
+        "Ding! Break done. One gentle step back in?",
     ],
     "snooze": [
         "Okay, {minutes} more. I'm counting on my paws!",
-        "Deal! {minutes}, then we're back to {goal}.",
+        "Deal! {minutes}, then we're back to work.",
     ],
     "storm": [
         "Whoa, lots of hopping around! 🐇 Pick just one thing for the next 10 minutes?",
@@ -94,7 +94,7 @@ TEMPLATES: dict[str, list[str]] = {
     ],
     "streak": [
         "{minutes} of solid focus! You're a lion today. 🦁",
-        "{minutes} deep in {goal}. Swamiji would approve!",
+        "{minutes} of deep work. Swamiji would approve!",
     ],
     "its_work": [
         "Got it! I'll remember {label} is work for you.",
@@ -208,9 +208,14 @@ class Brain:
             return None
         who = f"{name}" + (f" (age {age})" if age else "")
         prompt = (f"User: {who}. Goal: {goal}.\n" + (f"Window title: {title[:80]}\n" if title else "") +
-                  f"Situation: {situations[kind]}\nReply with ONE sentence under 24 words. No quotation marks.")
-        text = await self.generate(PERSONA, prompt, timeout=timeout, num_predict=70)
-        return clean_line(text) if text else None
+                  f"Situation: {situations[kind]}\nReply with ONE sentence under 24 words, speaking directly to {name} "
+                  f"(call them {name}; Swamiji is Swami Vivekananda, never the user). No quotation marks.")
+        # a little cooler than chat: short alert lines from a small model drift into nonsense when too "creative"
+        text = await self.generate(PERSONA, prompt, timeout=timeout, num_predict=70, temperature=0.6)
+        if not text:
+            return None
+        line = clean_line(text)
+        return line if acceptable_line(line, name) else None
 
     async def classify(self, activity: Activity, goals: list[str], work: list[str], distractions: list[str],
                        timeout: float = 20.0) -> Optional[Verdict]:
@@ -277,9 +282,20 @@ def _one_emoji(text: str) -> str:
     return re.sub(r"\s{2,}", " ", _EMOJI.sub(keep, text)).strip()
 
 
+_WRONG_ADDRESS = re.compile(r"\b(hey|hi|hello|oh|dear|ok(ay)?|psst|namaste)[,!]?\s+swami(ji)?\b|^swami(ji)?[,!]", re.I)
+
+
+def acceptable_line(line: str, name: str) -> bool:
+    """Reject model slips such as addressing the user as 'Swami' or answering for the wrong person."""
+    if len(line) < 12 or _WRONG_ADDRESS.search(line):
+        return False
+    other_names = re.findall(r"^(?i:hey|hi|hello|psst|okay|oh)[,!]?\s+([A-Z][a-z]+)", line)
+    return not other_names or other_names[0].lower() == name.split()[0].lower()
+
+
 def clean_line(text: str, limit: int = 220) -> str:
-    t = _one_emoji(_THINK.sub("", text).strip().strip('"“”').strip())
-    t = re.sub(r"^(Sheru|Assistant)\s*:\s*", "", t, flags=re.I)
+    t = re.sub(r"^(Sheru|Assistant)\s*:\s*", "", _THINK.sub("", text).strip(), flags=re.I)
+    t = _one_emoji(t.strip().strip('"“”').strip())
     t = re.sub(r"\s+", " ", t)
     if len(t) > limit:
         cut = t[:limit]

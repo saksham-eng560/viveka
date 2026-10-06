@@ -122,3 +122,26 @@ def test_heuristic_dsa_youtube_counts_as_focus() -> None:
     assert v.kind == "focus" and v.ambiguous
     shorts = Activity(domain="youtube.com", url="https://youtube.com/shorts/x", title="graph meme #shorts")
     assert heuristic_verdict(shorts, ["Crack DSA for placements"], [], ["youtube"]).kind == "distraction"
+
+
+def test_persona_guard_rejects_wrong_address_and_extra_emojis() -> None:
+    from persona import acceptable_line, clean_line
+
+    assert not acceptable_line("Hey Swami! Put down the reels, please!", "Arjun")
+    assert not acceptable_line("Swamiji, stop scrolling and code.", "Arjun")
+    assert not acceptable_line("Hi Rahul, time to get back to graphs!", "Arjun Mehta")
+    assert acceptable_line("Hey Arjun, back to graphs! 🦁", "Arjun Mehta")
+    assert acceptable_line("Psst, the reels can wait. Lions code first!", "Arjun")
+    assert clean_line('Sheru: "Back to code, Arjun! 🦁 🐾 ✨"') == "Back to code, Arjun! 🦁"
+
+
+@respx.mock
+def test_llm_line_that_misnames_user_falls_back_to_template(client: TestClient) -> None:
+    import asyncio
+
+    client.put("/api/profile", json=PROFILE)
+    respx.get(f"{OLLAMA}/api/tags").mock(return_value=httpx.Response(200, json={"models": []}))
+    respx.post(f"{OLLAMA}/api/generate").mock(return_value=httpx.Response(200, json={"response": "Hey Swami! Drop the reels."}))
+    brain = coach.get_coach().brain
+    line = asyncio.run(brain.line("distraction1", name="Saksham", age=21, goal="Crack DSA", label="Instagram", minutes="1 minute"))
+    assert line is None  # the coach then uses a template line
