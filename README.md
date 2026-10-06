@@ -6,6 +6,107 @@ Lighthouse is an intelligent, HeyClicky-inspired web companion built on Activity
 
 ---
 
+## Quick Navigation
+
+- [Run it in 2 minutes](#run-it-in-2-minutes)
+- [Scripts reference](#scripts-reference)
+- [Everyday commands](#everyday-commands)
+- [Manual setup (without scripts)](#manual-setup-without-scripts)
+- [Configuration](#configuration)
+- [Architecture](#architecture)
+- [Troubleshooting](#troubleshooting)
+
+---
+
+## Run it in 2 minutes
+
+### Prerequisites
+
+**macOS or Linux** (the scripts need `bash`, `curl`, `lsof`; Windows: use WSL or the manual setup below) • **Node.js** ^20.19 or ≥22.12 • **Python** ≥3.10 (or `uv`) • **Ollama** (optional: without it the extension uses heuristic mode and standups use a template) • **ActivityWatch** (optional: without it the backend uses sample data) • **Chrome/Brave** 116+
+
+```bash
+# Clone the repo and enter the directory
+git clone https://github.com/saksham-eng560/vivekanand.git && cd vivekanand
+
+# One-time setup (installs deps, pulls the LLM model, builds the extension)
+./setup.sh
+
+# Start everything (backend + dashboard; also Ollama / ActivityWatch, but only if installed)
+./start.sh
+```
+
+After `./start.sh` completes, your browser will open the dashboard at http://localhost:3000. Then:
+
+### Load the Extension
+
+1. Open `chrome://extensions/`
+2. Enable **Developer mode** (top-right toggle)
+3. Click **Load unpacked** and select the `extension/dist/` folder
+4. You should see "Lighthouse" in your toolbar
+
+### Try the Demo
+
+1. Click the **Lighthouse icon** in the toolbar, then click **Open side panel** in the popup
+2. Type a goal (e.g., "Building a React dashboard") and click **Start Session**
+3. Browse normally—when you stray off-task, a nudge appears; watch the focus score update in real-time
+
+**For a full walkthrough,** see the [60-Second Demo Script](#60-second-demo-script).
+
+**To stop:** Press Ctrl+C in the terminal running `./start.sh`.
+
+---
+
+## Scripts Reference
+
+These scripts automate setup, startup, and testing. All are idempotent. They need `bash`, `curl` and `lsof` and support macOS and Linux only (on Windows use WSL or the manual setup).
+
+| Script | What it does | Key flags | Example |
+|--------|-------------|-----------|---------|
+| `./setup.sh` | One-time install: checks Node/Python, installs deps, pulls the LLM model, builds the extension. Idempotent—safe to run multiple times. | `--dev` (also install test deps), `--skip-model` (don't pull LLM), `--with-env` (copy `.env.example` to `.env`), `-h/--help` | `./setup.sh --dev --with-env` |
+| `./start.sh` | Runs setup if needed; starts Ollama (if installed), aw-server (only if installed), backend, and dashboard. Waits for services to be healthy, then prints a summary and opens the dashboard. Ctrl+C stops all services. | `--detach`/`-d` (run in background; use `./stop.sh` to stop), `--no-open` (don't open dashboard in browser), `--fix-ollama` (macOS only; see below), `-y/--yes` (skip the `--fix-ollama` prompt; required without a TTY), `-h/--help` | `./start.sh -d`, `./start.sh --fix-ollama` |
+| `./stop.sh` | Stops anything recorded in `.run/*.pid` (dashboard, backend, aw-server, ollama). A pid is only signalled if it is still the process that was started (command and start time are checked); otherwise the pid file is treated as stale and removed. Does nothing if there are no pid files. | (none) | `./stop.sh` |
+| `./test.sh` | Runs all three test suites (extension, backend, dashboard) and shows a pass/fail table. Needs `./setup.sh` (use `--dev`) run first; it only auto-installs the backend test dependencies if `pytest` is missing. | `--build` (also run both `npm run build`s, after the tests), `-h/--help` | `./test.sh --build` |
+
+**`--fix-ollama` (macOS only)** has side effects, so it prints its plan and the matching `ollama serve` processes and asks `[y/N]` (pass `--yes` to skip; without a TTY `--yes` is required). It: (1) runs `launchctl setenv OLLAMA_ORIGINS "chrome-extension://*"`, which stays set for all apps until you log out, reboot or unset it, (2) quits the Ollama app, (3) stops any `ollama serve` process still running afterwards, (4) relaunches Ollama. Undo with `launchctl unsetenv OLLAMA_ORIGINS`. It only applies to a local Ollama: if `OLLAMA_URL` points to another host, it exits non-zero without changing anything (and `start.sh` never starts a local `ollama serve` for a remote URL).
+
+Environment overrides (export them in your shell; the scripts do not read `.env` files for these):
+- `LLM_MODEL` – `./setup.sh`: pulls this model **and** builds the extension with it (`VITE_LLM_MODEL`). `./start.sh`: passed to the backend only if set; otherwise the backend uses `pulse-backend/.env` or its default (`qwen3.5:4b`). `./test.sh --build` also builds the extension with it when set. Use the same value for all scripts.
+- `BACKEND_PORT` (default 8000), `DASHBOARD_PORT` (default 3000) – `./start.sh` only.
+- `OLLAMA_URL` (default `http://localhost:11434`), `AW_SERVER_URL` (default `http://localhost:5600`) – used by the scripts' readiness probes (and `OLLAMA_URL` also sets `OLLAMA_HOST` for the `ollama` commands the scripts run); the backend itself reads its own `pulse-backend/.env`.
+
+The first run downloads the model (several GB; this can take minutes).
+
+Logs are written to `.run/logs/` (backend.log, dashboard.log, ollama.log) and `.run/<name>.pid` files (pid plus start time) track running services.
+
+---
+
+## Everyday Commands
+
+```bash
+# Start services in the background (don't block your terminal)
+./start.sh --detach
+
+# Stop background services
+./stop.sh
+
+# Run all tests
+./test.sh
+
+# Watch backend logs
+tail -f .run/logs/backend.log
+
+# Watch dashboard logs
+tail -f .run/logs/dashboard.log
+
+# Check if Ollama is running and properly configured
+curl http://localhost:11434/api/tags
+
+# Check if the backend is up
+curl http://localhost:8000/docs   # use $BACKEND_PORT if you overrode it
+```
+
+---
+
 ## Why Lighthouse?
 
 ### The Problem
@@ -115,12 +216,30 @@ lighthouse/
 ├── Plan.md                      (Product spec)
 ├── .env.example                 (Configuration template)
 ├── docker-compose.yml           (Optional: Ollama + backend in containers)
+├── setup.sh                     (One-time setup script)
+├── start.sh                     (Start all services)
+├── stop.sh                      (Stop background services)
+├── test.sh                      (Run all test suites)
+├── scripts/
+│   └── lib.sh                   (Shared shell utilities for the scripts)
+├── docs/
+│   └── business/                (Business plan)
+│       ├── Lighthouse_Business_Plan.pdf
+│       ├── build_business_plan.py  (Regenerates the PDF)
+│       └── charts/              (Generated chart images)
+├── .run/                        (Created at runtime; gitignored)
+│   ├── <name>.pid               (PID + start time per service: backend, dashboard, ...)
+│   └── logs/
+│       ├── backend.log
+│       ├── dashboard.log
+│       └── ollama.log
 │
 ├── extension/                   (Chrome MV3 extension)
 │   ├── manifest.json
 │   ├── package.json
 │   ├── vite.config.ts
 │   ├── tsconfig.json
+│   ├── scripts/                 (gen-icons.mjs)
 │   ├── src/
 │   │   ├── background/          (Service worker & tab tracking)
 │   │   │   ├── index.ts
@@ -160,7 +279,9 @@ lighthouse/
 │   └── tests/
 │       ├── test_api.py
 │       ├── test_aw_queries.py
+│       ├── test_contract.py
 │       ├── test_llm_service.py
+│       ├── test_sample_data.py
 │       └── conftest.py
 │
 └── dashboard/                   (React + Vite web UI)
@@ -182,7 +303,9 @@ lighthouse/
 
 ---
 
-## Quick Start
+## Manual Setup (without scripts)
+
+If you prefer to set up manually without using the provided scripts, follow these steps. This is useful for development, debugging, or custom configurations.
 
 ### Prerequisites
 
@@ -242,8 +365,8 @@ uv venv --python 3.11
 uv pip install -r requirements.txt   # use requirements-dev.txt to also run tests
 
 # Option B: Using standard venv
-python3 -m venv venv
-source venv/bin/activate  # or `venv\Scripts\activate` on Windows
+python3 -m venv .venv
+source .venv/bin/activate  # on Windows: .venv\Scripts\activate
 pip install -r requirements.txt   # use requirements-dev.txt to also run tests
 
 # Start backend
@@ -260,7 +383,7 @@ npm install
 npm run dev
 ```
 
-**Verify:** Opens http://localhost:3000 automatically. You should see metric cards (likely showing sample data if ActivityWatch is empty).
+**Verify:** Open http://localhost:3000 (the dev server does not open a browser itself). You should see metric cards (likely showing sample data if ActivityWatch is empty).
 
 ### 5. Build & Load Extension
 
@@ -331,9 +454,19 @@ VITE_API_URL=http://localhost:8000
 
 ---
 
+## Business Plan
+
+The business plan is at [`docs/business/Lighthouse_Business_Plan.pdf`](docs/business/Lighthouse_Business_Plan.pdf). Every figure in it derives from one model section in the generator script. Regenerate it with:
+
+```bash
+uv run --with reportlab --with matplotlib python docs/business/build_business_plan.py
+```
+
+---
+
 ## Running Tests
 
-Each component has its own test suite:
+The easiest way is `./test.sh` (after `./setup.sh --dev`), which runs all three suites. To run them by hand, each component has its own test suite:
 
 ```bash
 # Extension
@@ -383,7 +516,37 @@ cd ../dashboard && npm run typecheck
 
 ---
 
-## Graceful Degradation & Troubleshooting
+## Troubleshooting
+
+### Script-Specific Issues
+
+**Port already in use?**
+- If `./start.sh` fails with "port already in use" (e.g., for 8000 or 3000):
+  - Find and stop the process: `lsof -i :8000` (shows PID), then `kill <PID>`
+  - Or use `./stop.sh` if services are running in detached mode
+  - Then retry `./start.sh`
+
+**Ollama not found or won't start?**
+- Install from https://ollama.com/download
+- Verify installation: `ollama --version`
+- If Ollama is already running but the extension can't reach it:
+  - On **macOS**: Run `./start.sh --fix-ollama` (asks for confirmation; sets a persistent `launchctl` variable, restarts Ollama; undo: `launchctl unsetenv OLLAMA_ORIGINS`)
+  - Manually: Set `OLLAMA_ORIGINS="chrome-extension://*"` and restart the Ollama app
+
+**Python version too old?**
+- Install `uv` (fastest package manager): `curl -LsSf https://astral.sh/uv/install.sh | sh`
+- Then `./setup.sh` will use `uv` to create a Python 3.11 venv automatically
+
+**setup.sh or start.sh says "command not found"?**
+- Ensure you're in the repo root: `pwd` should show `.../vivekanand`
+- Make scripts executable: `chmod +x setup.sh start.sh stop.sh test.sh`
+- Try with `bash ./setup.sh` explicitly
+
+**Where are the logs?**
+- `.run/logs/backend.log` – FastAPI server logs
+- `.run/logs/dashboard.log` – React dev server logs
+- `.run/logs/ollama.log` – Ollama server logs
+- Watch in real-time: `tail -f .run/logs/backend.log`
 
 ### Extension Offline Modes
 
@@ -395,6 +558,12 @@ cd ../dashboard && npm run typecheck
 
 ### Common Issues
 
+**AI says "offline – heuristic mode"?**
+- Ollama is not reachable or not configured to accept extension requests.
+- **macOS:** Run `./start.sh --fix-ollama` (see Scripts Reference for its side effects).
+- **Linux/manual:** Set `export OLLAMA_ORIGINS="chrome-extension://*"` before starting Ollama, then restart.
+- Verify: `curl http://localhost:11434/api/tags` should return 200 OK.
+
 **403 from Ollama or ActivityWatch?**
 - Ensure `OLLAMA_ORIGINS` is set and Ollama is restarted.
 - Ensure `cors_regex` is in aw-server config and aw-server is restarted.
@@ -405,7 +574,7 @@ cd ../dashboard && npm run typecheck
 
 **No data showing in dashboard?**
 - Did you set a goal and browse? ActivityWatch needs ≥1 event.
-- Check backend logs: `uvicorn main:app --reload` should show request traces.
+- Check backend logs: `tail -f .run/logs/backend.log` should show request traces.
 - Try `DATA_SOURCE=sample` in `.env` to see demo data.
 
 **Standup returns "No tracked activity" always?**
@@ -413,9 +582,9 @@ cd ../dashboard && npm run typecheck
 - Check if ActivityWatch has events for that date in the bucket `aw-watcher-web-lighthouse`.
 
 **Extension doesn't load unpacked?**
-- Ensure `extension/dist/manifest.json` exists.
+- Ensure `extension/dist/manifest.json` exists: `ls extension/dist/manifest.json`
 - Check console for errors: `chrome://extensions/` → Lighthouse → **Errors**.
-- Try: `npm run typecheck && npm run build` in extension dir.
+- Try: `cd extension && npm run typecheck && npm run build`, then reload the extension.
 
 ---
 
@@ -477,7 +646,7 @@ MIT (placeholder—add LICENSE file if needed).
 
 - **How private is it?** Completely. All data stays on your machine. Ollama and ActivityWatch run locally. No cloud calls. No telemetry.
 - **Which LLM should I use?** `qwen3.5:4b` (default, fast), `llama3` (accurate), or `phi3` (small, low-resource).
-- **Can I run this on Windows?** Yes—install Ollama, Python, Node, and aw-server-rust. Paths will differ (e.g., `%APPDATA%\activitywatch\...` for config).
+- **Can I run this on Windows?** Not with the scripts (macOS/Linux only). Use WSL, or follow the Manual Setup section after installing Ollama, Python, Node, and aw-server-rust; paths will differ (e.g., `%APPDATA%\activitywatch\...`).
 - **What if Ollama is slow?** The extension has an 8-second timeout and falls back to heuristic mode. Dashboard also gracefully handles slowness.
 - **Can I customize the nudge message?** Yes—edit `extension/src/content/Overlay.tsx` and rebuild.
 

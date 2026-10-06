@@ -9,6 +9,7 @@ coverage
 venv
 __pycache__
 .pytest_cache
+.ruff_cache/
 
 # secrets / env (keep the example)
 .env
@@ -18,3 +19,6 @@ __pycache__
 # misc
 *.log
 .DS_Store
+
+# runtime state written by start.sh
+.run/
