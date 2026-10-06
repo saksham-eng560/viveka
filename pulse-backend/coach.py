@@ -50,12 +50,14 @@ class Pace:
     wisdom_gap: float  # seconds between ambient quotes/facts
     break_len: float
     hush: float
+    headsup: float = 4.0  # seconds on an off-goal tab/app before the gentle "wrong tab?" note
+    headsup_cooldown: float = 180.0  # don't repeat that note for the same site/app within this window
 
 
 PACES: dict[str, Pace] = {
-    "gentle": Pace(120, 600, 180, 300, 300, 120, 10, 45 * 60, 25 * 60, 300, 3600),
-    "balanced": Pace(45, 300, 90, 300, 180, 120, 8, 25 * 60, 12 * 60, 300, 1800),
-    "demo": Pace(10, 40, 15, 90, 25, 40, 6, 180, 75, 60, 120),
+    "gentle": Pace(120, 600, 180, 300, 300, 120, 10, 45 * 60, 25 * 60, 300, 3600, headsup=12, headsup_cooldown=600),
+    "balanced": Pace(45, 300, 90, 300, 180, 120, 8, 25 * 60, 12 * 60, 300, 1800, headsup=4, headsup_cooldown=180),
+    "demo": Pace(10, 40, 15, 90, 25, 40, 6, 180, 75, 60, 120, headsup=2, headsup_cooldown=40),
 }
 WISDOM_MULT = {"often": 0.5, "sometimes": 1.0, "rarely": 2.5}
 
@@ -155,6 +157,8 @@ class Coach:
         self.dist_level = 0
         self.dist_last_alert = 0.0
         self.dist_episode = 0
+        self.headsup_episode = -1
+        self.headsup_at: dict[str, float] = {}
         self.stall_level = 0
         self.stall_last_alert = 0.0
         self.active_alert: Optional[int] = None
@@ -198,7 +202,13 @@ class Coach:
         verdict = self._judge(act) if act and self.profile else None
         if not self.buddy_online(now):
             self.tick()  # no desktop app: the browser drives the engine
-        alert = self._find(self.active_alert) if self.active_alert and not self.buddy_online(now) else None
+        alert = None
+        if not self.buddy_online(now):  # no desktop app: the extension shows Sheru's messages inside the page
+            alert = self._find(self.active_alert) if self.active_alert else None
+            if alert is None and self.verdict is not None and self.verdict.kind == "distraction":
+                heads_up = next((m for m in reversed(self.messages) if m.kind == "nudge"), None)
+                if heads_up is not None and now - heads_up.ts <= 15:
+                    alert = heads_up
         commands, self.extension_commands = self.extension_commands, []
         return {
             "verdict": None if verdict is None else {
@@ -306,14 +316,14 @@ class Coach:
         if not self._spawn(run()):
             self._llm_pending.discard(ck)
 
-    def _prepare_line(self, slot: str, kind: str, label: str, minutes: str, title: str = "") -> None:
+    def _prepare_line(self, slot: str, kind: str, label: str, minutes: str, title: str = "", place: str = "tab") -> None:
         p = self.profile
         if p is None or slot in self._lines:
             return
 
         async def run() -> None:
             line = await self.brain.line(kind, name=p.first_name, age=p.age, goal=p.main_goal, label=label,
-                                         minutes=minutes, title=title)
+                                         minutes=minutes, title=title, place=place)
             if line:
                 self._lines[slot] = line
                 if len(self._lines) > 40:
@@ -330,7 +340,7 @@ class Coach:
         self.last_message_at = now
         if msg.ttl is None:
             self.active_alert = msg.id
-        if kind in ("distraction", "stall"):
+        if kind in ("distraction", "stall", "nudge"):
             try:
                 self.store.log_alert(now, kind, msg.level, msg.label, text)
             except Exception:  # pragma: no cover - logging must never break the coach
@@ -490,11 +500,12 @@ class Coach:
             self.dist_since = now
             self.dist_episode += 1
             self._prepare_line(f"d{self.dist_episode}-1", "distraction1", act.label, fmt_minutes(pace.distraction),
-                               act.title)
+                               act.title, place=self._place(act))
         self.dist_last_tick = now
         if quiet or now < self.snooze_until:
             return
         spent = now - self.dist_since
+        self._heads_up(act, verdict, now, pace, spent)
         level = 0
         if self.dist_level == 0 and spent >= pace.distraction:
             level = 1
@@ -507,11 +518,37 @@ class Coach:
                                                        **self._fields(act.label, spent))
         title = "Psst!" if level == 1 else "Focus check"
         self._push("distraction", "alert" if level == 1 else "worried", line, title=title, level=level,
-                   label=act.label, ttl=None, actions=[ACT_BACK, ACT_SNOOZE, ACT_ITS_WORK])
+                   label=act.label, ttl=None, actions=[ACT_BACK, ACT_SNOOZE, ACT_ITS_WORK],
+                   source=self._why(verdict))
         self.dist_level += 1
         self.dist_last_alert = now
         self._prepare_line(f"d{self.dist_episode}-2", "distraction2", act.label, fmt_minutes(spent + pace.repeat),
-                           act.title)
+                           act.title, place=self._place(act))
+
+    @staticmethod
+    def _place(act: Activity) -> str:
+        return "tab" if act.is_web else "window"
+
+    @staticmethod
+    def _why(verdict: Verdict) -> str:
+        return f"Why: {verdict.reason}" if verdict.reason else ""
+
+    def _heads_up(self, act: Activity, verdict: Verdict, now: float, pace: Pace, spent: float) -> None:
+        """A soft "wrong tab?" note shortly after landing on something off-goal, well before any real alert."""
+        if self.dist_level > 0 or self.headsup_episode == self.dist_episode or spent < pace.headsup:
+            return
+        # an ambiguous site (e.g. YouTube) may still be judged "on goal" by the model: give it a few seconds
+        settled = not verdict.ambiguous or verdict.source == "llm" or not self.settings.llm_classify or spent >= 6
+        if not settled:
+            return
+        self.headsup_episode = self.dist_episode
+        if now - self.headsup_at.get(act.key, -1e12) < pace.headsup_cooldown:
+            return  # we mentioned this very site a moment ago; the escalation alerts take it from here
+        self.headsup_at[act.key] = now
+        place = self._place(act)
+        self._push("nudge", "think", template("headsup", self.rng, **{**self._fields(act.label, spent), "place": place}),
+                   title=f"Wrong {place}?", source=self._why(verdict), label=act.label, ttl=12,
+                   actions=[ACT_BACK, ACT_ITS_WORK])
 
     def _stall(self, act: Activity, verdict: Verdict, d: DesktopSample, now: float, pace: Pace, quiet: bool) -> None:
         key_idle = d.key_idle

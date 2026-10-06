@@ -122,3 +122,28 @@ describe("tracker with Sheru's brain online", () => {
     expect(brainOnline()).toBe(false);
   });
 });
+
+describe("quick follow-ups for the gentle heads-up", () => {
+  it("re-checks the brain a few seconds after landing on a distracting tab when the desktop buddy is off", async () => {
+    installChrome([{ id: 3, windowId: 1, url: "https://www.instagram.com/", title: "Instagram", active: true }]);
+    const calls = stubBrain(() => brainReply({ buddyOnline: false }));
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    await refreshActiveTab({ force: true });
+    const samples = () => calls.filter((c) => c.url.endsWith("/api/browser/sample")).length;
+    const before = samples();
+    await vi.advanceTimersByTimeAsync(3100);
+    await vi.waitFor(() => expect(samples()).toBe(before + 1));
+    await vi.advanceTimersByTimeAsync(3000);
+    await vi.waitFor(() => expect(samples()).toBe(before + 2));
+  });
+
+  it("does not poll extra when the desktop buddy is on screen", async () => {
+    installChrome([{ id: 3, windowId: 1, url: "https://www.instagram.com/", title: "Instagram", active: true }]);
+    const calls = stubBrain(() => brainReply({ buddyOnline: true }));
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    await refreshActiveTab({ force: true });
+    const before = calls.length;
+    await vi.advanceTimersByTimeAsync(7000);
+    expect(calls.length).toBe(before);
+  });
+});

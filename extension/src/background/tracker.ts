@@ -22,6 +22,8 @@ interface TrackerRuntime {
   lastProbeAt: number;
   lowTimer: ReturnType<typeof setTimeout> | null;
   refreshing: Promise<void> | null;
+  /** Quick re-checks after landing on a distracting tab, so Sheru's "wrong tab?" note shows within seconds. */
+  followUps: ReturnType<typeof setTimeout>[];
 }
 
 const rt: TrackerRuntime = {
@@ -32,6 +34,7 @@ const rt: TrackerRuntime = {
   lastProbeAt: 0,
   lowTimer: null,
   refreshing: null,
+  followUps: [],
 };
 
 export function resetTrackerForTests(): void {
@@ -43,6 +46,8 @@ export function resetTrackerForTests(): void {
   rt.lastProbeAt = 0;
   rt.lowTimer = null;
   rt.refreshing = null;
+  rt.followUps.forEach(clearTimeout);
+  rt.followUps = [];
 }
 
 export const isPaused = () => rt.paused;
@@ -156,6 +161,14 @@ async function applyTab(tab: ActiveTab, force: boolean): Promise<void> {
 
   // Sheru's brain judges against the onboarding goals when it is running; otherwise classify locally.
   const reply = await syncTab(tab, !isInactive());
+  rt.followUps.forEach(clearTimeout);
+  rt.followUps = [];
+  if (reply?.verdict?.kind === "distraction" && !reply.buddyOnline) {
+    // no desktop buddy: check back soon so the brain's gentle heads-up reaches this page quickly
+    rt.followUps = [3000, 6000].map((ms) =>
+      setTimeout(() => void getSnapshot().then((s) => pingBrain(s.currentTab, !isInactive())), ms),
+    );
+  }
   let r: { score: number; category: string; reasoning: string; source: "llm" | "heuristic" };
   if (reply?.verdict) {
     const v = reply.verdict;

@@ -64,7 +64,7 @@ Everything (the model, the coach, your profile and history) runs and stays on yo
 | Area | What you get |
 |---|---|
 | **Desktop buddy** | Native macOS app: transparent, always on top, on every Space; eyes follow your cursor; blinks, waves, naps when you're away, sips chai on breaks; click for a menu, drag anywhere; 🦁 menu-bar item. Clicks pass through everywhere except Sheru and his bubble. |
-| **Smart detection** | Writing-stall detector (two soft nudges, then "you seem distracted"), detour alerts with escalation, app-hopping detection, away/screen-lock awareness, focus-streak celebrations. |
+| **Smart detection** | A gentle **"Wrong tab?"** heads-up within seconds of landing on an off-goal tab or app (with Sheru's reasoning), writing-stall detector (two soft nudges, then "you seem distracted"), detour alerts with escalation, app-hopping detection, away/screen-lock awareness, focus-streak celebrations. |
 | **Goal-aware judgement** | Your "it's for work" choices → onboarding chips → built-in rules for ~200 common apps and sites → local LLM for ambiguous titles (cached). |
 | **Sheru's voice** | A custom Ollama model (`sheru`, a persona Modelfile on top of `qwen3.5:4b`) writes short, personal lines and answers chat; instant template fallbacks when the model is off. |
 | **Vivekananda content** | 24 quotes cited to *The Complete Works*, 16 facts (Chicago 1893, the Tata–IISc letter, Tesla, Kanyakumari…). Misattributed internet quotes are deliberately excluded. |
@@ -172,7 +172,7 @@ git pull && ./setup.sh && ./start.sh   # update (setup re-installs changed depen
 
 **Sheru on the desktop.** He lives in the top-left corner. Hover to see what he thinks of the current app (`✓ LeetCode`), click for the menu (*Swamiji quote · Fun fact · Talk to me · 5-min break · Quiet 30 min · Dashboard*), or drag him anywhere; the position is remembered. The 🦁 menu-bar item can show or hide him, reset his position, quiet him, open the dashboard or edit goals.
 
-**Alerts.** A speech bubble with a short personal line and buttons:
+**Alerts.** First a soft **"Wrong tab?"** heads-up (it fades on its own and disappears the moment you switch back), then, if you stay, a speech bubble with a short personal line and buttons. Each one shows Sheru's reasoning underneath (*"Why: Cats videos are unrelated to DSA learning."*).
 
 | Button | Effect |
 |---|---|
@@ -206,6 +206,7 @@ Then four detectors run, timed by your **pace**:
 
 | Detector | Trigger | What Sheru does |
 |---|---|---|
+| **Wrong-tab heads-up** | You land on an off-goal tab or app | A few seconds later, a soft, self-dismissing note: *"Hmm, Instagram? I don't think that's the right tab for 'Crack DSA for placements', Arjun. Shall we switch back?"* plus the reason. No alarm sound, no sticky alert; it vanishes when you go back. For ambiguous sites (YouTube) Sheru first waits briefly for the model's verdict, so tutorials aren't flagged. |
 | **Writing stall** | You were typing in a writing context (editor, doc, notes, LeetCode…) and stopped | Nudge 1: *"Thinking pause?"* plus a quote as fuel → nudge 2: *"Still stuck? Try the messiest first line"* → step 3: **"You seem distracted"**, a persistent alert with *I'm back / Take a break / 2 more min*. Typing again clears it with a cheer. |
 | **Detour** | An off-goal app or site stays in front | A playful alert, then a firmer (still funny) one if you stay. Coming back to work is celebrated. |
 | **Hopping** | Many app or site switches in a short window | *"Pick just one thing for the next 10 minutes?"* |
@@ -213,6 +214,7 @@ Then four detectors run, timed by your **pace**:
 
 | Timing | Demo | Balanced | Gentle |
 |---|---|---|---|
+| Wrong-tab heads-up (same site again after) | 2 s (40 s) | 4 s (3 min) | 12 s (10 min) |
 | Detour: first alert / follow-ups | 10 s / 40 s | 45 s / 5 min | 2 min / 10 min |
 | Writing stall: each step | 15 s | 90 s | 3 min |
 | Away (Sheru naps) | 90 s idle | 5 min idle | 5 min idle |
@@ -222,6 +224,10 @@ Then four detectors run, timed by your **pace**:
 | Quote or fact (× 0.5 *often*, × 2.5 *rarely*) | 75 s | 12 min | 25 min |
 
 When you're away or the screen is locked, Sheru naps and never nudges, then welcomes you back. Breaks and *Quiet 30 min* silence all alerts.
+
+<p align="center">
+  <img src="docs/images/buddy-wrong-tab.png" alt="Gentle wrong-tab heads-up with Sheru's reasoning" width="560">
+</p>
 
 <p align="center">
   <img src="docs/images/buddy-stall-1.png" alt="Writing stall, first nudge" width="400">
@@ -235,7 +241,7 @@ When you're away or the screen is locked, Sheru naps and never nudges, then welc
 1. `./start.sh --fresh` (or double-click `Lighthouse.command`). The browser opens onboarding and Sheru waves from the top-left.
 2. Onboard: a name, the goal *Crack DSA for placements*, tick *VS Code* and *LeetCode*, keep *YouTube*/*Instagram*, choose **Demo**. Sheru greets you by name and shares *"Arise, awake…"*.
 3. **Writing stall:** in your editor or a doc, type a line and stop. About 15 s later comes *"Thinking pause?"* plus a quote; at 30 s *"Still stuck?"*; at 45 s **"You seem distracted"**. Type a word and Sheru cheers.
-4. **Detour:** open Instagram or a funny YouTube video in the Lighthouse window. After about 10 s a playful alert appears; click **Back to work** and your editor comes back to the front.
+4. **Wrong tab:** open Instagram or a funny YouTube video. Within a few seconds Sheru gently asks *"Wrong tab?"* and shows why he thinks so. Switch back and the note disappears. Stay, and at about 10 s a playful alert follows; click **Back to work** and your editor comes back to the front.
 5. Click Sheru → **Swamiji quote**, **Fun fact**, **Talk to me** (*"Who was Narendranath?"*).
 6. Show the dashboard: live status, recent nudges and the day's timeline from Sheru's log.
 

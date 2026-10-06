@@ -38,6 +38,8 @@
     ui.host.innerHTML = await res.text();
     svg = ui.host.querySelector("svg");
     svg.removeAttribute("width"); svg.removeAttribute("height");
+    svg.querySelector("title")?.remove(); // no grey native tooltip over Sheru; aria-label keeps the name
+    ui.wrap.removeAttribute("title");
     setMood("idle");
     scheduleBlink(); scheduleFidget(); reportHitRects();
   }
@@ -122,7 +124,7 @@
     try {
       audio = audio || new (window.AudioContext || window.webkitAudioContext)();
       if (audio.state === "suspended") audio.resume().catch(() => {});
-      const notes = kind === "alert" ? [659.3, 880] : kind === "happy" ? [784, 1046.5] : [880];
+      const notes = kind === "alert" ? [659.3, 880] : kind === "happy" ? [784, 1046.5] : kind === "soft" ? [587.3] : [880];
       notes.forEach((f, i) => {
         const o = audio.createOscillator(), g = audio.createGain();
         o.type = "sine"; o.frequency.value = f;
@@ -195,7 +197,7 @@
     if (mood === "alert") oneShot("shake", 600);
     else if (mood === "celebrate") oneShot("jump", 1900);
     else if (mood === "happy" || mood === "wave") oneShot("hop", 650);
-    if (msg.alert) chime("alert"); else if (mood === "celebrate") chime("happy");
+    if (msg.alert) chime("alert"); else if (msg.kind === "nudge") chime("soft"); else if (mood === "celebrate") chime("happy");
     speak((msg.title ? msg.title + ". " : "") + msg.text);
     typeText(msg.text, () => {
       if (msg.ttl !== null && msg.ttl !== undefined && !msg.alert && !st.chatting) {
@@ -239,6 +241,10 @@
   }
 
   function enqueue(msg) {
+    if (msg.kind === "nudge" && !st.chatting && !(st.current && st.current.alert)) {
+      st.queue = st.queue.filter((m) => m.kind !== "nudge");
+      show(msg); return;
+    }
     if (msg.alert) {
       // alerts jump the queue and replace whatever is on screen (unless the user is typing to Sheru)
       st.queue = st.queue.filter((m) => m.alert);
@@ -355,8 +361,8 @@
   // ----------------------------------------------------------------- polling
   const prettyVerdict = (now) => {
     if (!now) return "";
-    const icon = now.verdict === "focus" ? "✓" : now.verdict === "distraction" ? "!" : "·";
-    return `${icon} ${now.label}`;
+    const state = now.verdict === "focus" ? "✓ On track" : now.verdict === "distraction" ? "! Off track" : "· In between";
+    return `${state} · ${now.label}`;
   };
 
   async function poll() {
@@ -383,6 +389,8 @@
       msgs.forEach((m) => { st.lastId = Math.max(st.lastId, m.id); enqueue(m); });
       st.lastId = Math.max(st.lastId, s.lastId || 0);
 
+      // a "wrong tab?" heads-up disappears as soon as you are back on something on-goal
+      if (st.current && st.current.kind === "nudge" && s.now && s.now.verdict === "focus") { oneShot("hop", 650); hide(); }
       // an alert that the backend considers resolved (user went back to work) disappears
       if (st.current && st.current.alert && st.current.id > 0 && s.activeAlertId !== st.current.id) hide();
       st.activeAlertId = s.activeAlertId;

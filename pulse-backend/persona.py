@@ -33,6 +33,12 @@ TEMPLATES: dict[str, list[str]] = {
         "Hi {name}! Paws folded, turban on. Today's mission: {goal}.",
         "Namaste {name}! A lion cub reporting for duty. First up: {goal}.",
     ],
+    "headsup": [
+        "Psst, {name}... {label} looks like the wrong {place} for your goal. No rush, just a gentle heads-up. 🌿",
+        "Hmm, {label}? I don't think that's the right {place} for '{goal}', {name}. Shall we switch back?",
+        "Little lion check: you're on {label}. That's not on today's plan. Wrong {place}, maybe? 🙂",
+        "{name}, a gentle reminder: {label} isn't part of '{goal}'. I'll give you a moment.",
+    ],
     "distraction1": [
         "Psst, {name}! {label} is cute, but your goals are cuter. Shall we hop back?",
         "Tiny paw tap 🐾 {label} isn't on today's plan. Your goal is waiting: {goal}.",
@@ -195,12 +201,13 @@ class Brain:
 
     # ---------------------------------------------------------------- tasks
     async def line(self, kind: str, *, name: str, age: Optional[int], goal: str, label: str, minutes: str,
-                   title: str = "", timeout: float = 6.0) -> Optional[str]:
+                   title: str = "", place: str = "tab", timeout: float = 6.0) -> Optional[str]:
         situations = {
             "distraction1": f"{name} has been on {label} for {minutes} instead of working on '{goal}'. "
-                            "Playfully nudge them back.",
-            "distraction2": f"{name} is STILL on {label} after {minutes}, instead of '{goal}'. Be a bit firmer but "
-                            "still kind and funny. Mention being a lion, not a sheep.",
+                            f"Gently and playfully tell them this looks like the wrong {place} for their goal "
+                            "and invite them back.",
+            "distraction2": f"{name} is STILL on {label} after {minutes}, instead of '{goal}'. Kindly say it is still "
+                            f"the wrong {place}; be a bit firmer but warm and funny. Mention being a lion, not a sheep.",
             "stall3": f"{name} was writing in {label} for '{goal}' but has not typed anything for {minutes}. "
                       "Gently tell them they seem distracted and suggest one tiny next step or a short break.",
         }
@@ -214,7 +221,7 @@ class Brain:
         text = await self.generate(PERSONA, prompt, timeout=timeout, num_predict=70, temperature=0.6)
         if not text:
             return None
-        line = clean_line(text)
+        line = brief(clean_line(text))
         return line if acceptable_line(line, name) else None
 
     async def classify(self, activity: Activity, goals: list[str], work: list[str], distractions: list[str],
@@ -291,6 +298,24 @@ def acceptable_line(line: str, name: str) -> bool:
         return False
     other_names = re.findall(r"^(?i:hey|hi|hello|psst|okay|oh)[,!]?\s+([A-Z][a-z]+)", line)
     return not other_names or other_names[0].lower() == name.split()[0].lower()
+
+
+def brief(line: str, max_words: int = 26) -> str:
+    """Small models ignore "one short sentence": keep whole sentences up to ~max_words (at least one)."""
+    if len(line.split()) <= max_words:
+        return line
+    parts = re.split(r"(?<=[.!?])\s+", line)
+    kept: list[str] = []
+    for i, part in enumerate(parts):
+        lead = _EMOJI.match(part)
+        if kept and lead:  # an emoji that followed the previous sentence belongs to it
+            kept[-1] += " " + lead.group(0)
+            part = part[lead.end():].strip()
+        if kept and len(" ".join(kept + [part]).split()) > max_words:
+            break
+        if part:
+            kept.append(part)
+    return " ".join(kept).strip()
 
 
 def clean_line(text: str, limit: int = 220) -> str:

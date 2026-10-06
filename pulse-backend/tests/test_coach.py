@@ -238,3 +238,74 @@ def test_no_profile_no_detection(tmp_path: Any, clock: Clock) -> None:
     assert c.messages[-1].kind == "info"
     assert any(a["id"] == "open_onboarding" for a in c.messages[-1].actions)
     assert c.mood(clock.t) == "wave"
+
+
+def chrome_on(title: str) -> DesktopSample:
+    return DesktopSample(app="Google Chrome", bundle_id="com.google.Chrome", title=title, key_idle=40, input_idle=1)
+
+
+def test_gentle_wrong_tab_heads_up_comes_first(tmp_path: Any, clock: Clock) -> None:
+    c = make_coach(tmp_path, clock)
+    insta = chrome_on("Reels • Instagram - Google Chrome")
+    run(c, clock, DEMO.headsup - 1, desktop=insta)
+    assert not [m for m in c.messages if m.kind == "nudge"]
+    run(c, clock, 2, desktop=insta)
+    nudges = [m for m in c.messages if m.kind == "nudge"]
+    assert len(nudges) == 1
+    n = nudges[0]
+    assert n.title == "Wrong tab?" and "Instagram" in n.text and "tab" in n.text
+    assert n.source.startswith("Why: ") and n.ttl is not None and c.active_alert is None  # soft, not sticky
+    assert {a["id"] for a in n.actions} == {"back_to_work", "its_work"}
+    assert c.mood(clock.t) != "alert"
+    # the real (persistent) alert still follows at the pace's threshold, now with the reasoning attached
+    run(c, clock, DEMO.distraction, desktop=insta)
+    alert = c._find(c.active_alert)
+    assert alert is not None and alert.kind == "distraction" and alert.source.startswith("Why: ")
+    assert len([m for m in c.messages if m.kind == "nudge"]) == 1
+
+
+def test_heads_up_says_window_for_apps_and_is_not_repeated_right_away(tmp_path: Any, clock: Clock) -> None:
+    c = make_coach(tmp_path, clock)
+    steam = DesktopSample(app="Steam", bundle_id="com.valvesoftware.steam", title="Library", key_idle=40, input_idle=1)
+    run(c, clock, DEMO.headsup + 1, desktop=steam)
+    assert [m.title for m in c.messages if m.kind == "nudge"] == ["Wrong window?"]
+    run(c, clock, 3, desktop=vscode(key_idle=0.5))  # back to work...
+    run(c, clock, DEMO.headsup + 1, desktop=steam)  # ...and straight back: no second heads-up yet
+    assert len([m for m in c.messages if m.kind == "nudge"]) == 1
+    run(c, clock, 3, desktop=vscode(key_idle=0.5))
+    clock.t += DEMO.headsup_cooldown
+    run(c, clock, DEMO.headsup + 1, desktop=steam)  # after the cooldown it may speak again
+    assert len([m for m in c.messages if m.kind == "nudge"]) == 2
+
+
+def test_heads_up_waits_for_the_model_on_ambiguous_sites(tmp_path: Any, clock: Clock) -> None:
+    import dataclasses
+
+    c = make_coach(tmp_path, clock)
+    c.settings = dataclasses.replace(c.settings, llm_classify=True)  # model "on" but slow: verdict stays heuristic
+    yt = chrome_on("Funny cats compilation - YouTube - Google Chrome")
+    run(c, clock, 4, desktop=yt)
+    assert not [m for m in c.messages if m.kind == "nudge"]  # YouTube could be a tutorial: wait a little
+    run(c, clock, 3, desktop=yt)
+    assert [m.title for m in c.messages if m.kind == "nudge"] == ["Wrong tab?"]
+
+
+def test_no_heads_up_during_break_or_snooze(tmp_path: Any, clock: Clock) -> None:
+    c = make_coach(tmp_path, clock)
+    c.action("break", minutes=1)
+    run(c, clock, 20, desktop=chrome_on("Reels • Instagram - Google Chrome"))
+    assert not [m for m in c.messages if m.kind == "nudge"]
+
+
+def test_heads_up_reaches_the_page_when_desktop_app_is_off(tmp_path: Any, clock: Clock) -> None:
+    c = make_coach(tmp_path, clock)
+    seen = []
+    for _ in range(DEMO.headsup + 2):
+        clock.t += 1
+        reply = c.ingest_browser(BrowserSample(url="https://www.instagram.com/reels/", title="Instagram"))
+        if reply["alert"]:
+            seen.append(reply["alert"])
+    assert seen and seen[-1]["kind"] == "nudge" and seen[-1]["title"] == "Wrong tab?"
+    assert seen[-1]["alert"] is False  # soft: the page shows it, nothing sticky
+    clock.t += 1
+    assert c.ingest_browser(BrowserSample(url="https://leetcode.com/problems/x", title="Two Sum - LeetCode"))["alert"] is None

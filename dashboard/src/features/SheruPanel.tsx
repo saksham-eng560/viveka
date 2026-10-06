@@ -62,7 +62,7 @@ export function SheruPanel({ profile, onProfile }: { profile: Profile; onProfile
   const focus = today?.focusSeconds ?? 0;
   const detour = today?.distractionSeconds ?? 0;
   const pct = focus + detour > 0 ? Math.round((focus / (focus + detour)) * 100) : null;
-  const nudges = (today?.alerts ?? []).filter((a) => a.kind === "distraction" || a.kind === "stall").slice(-4).reverse();
+  const nudges = (today?.alerts ?? []).filter((a) => ["distraction", "stall", "nudge"].includes(a.kind)).slice(-4).reverse();
 
   return (
     <Card className="overflow-hidden" data-testid="sheru-panel">

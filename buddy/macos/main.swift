@@ -41,7 +41,7 @@ struct Config {
     }
 }
 
-let windowSize = NSSize(width: 460, height: 320)
+let windowSize = NSSize(width: 500, height: 340)
 
 // MARK: - panel
 

@@ -145,3 +145,12 @@ def test_llm_line_that_misnames_user_falls_back_to_template(client: TestClient) 
     brain = coach.get_coach().brain
     line = asyncio.run(brain.line("distraction1", name="Saksham", age=21, goal="Crack DSA", label="Instagram", minutes="1 minute"))
     assert line is None  # the coach then uses a template line
+
+
+def test_long_model_lines_are_cut_to_whole_sentences() -> None:
+    from persona import brief
+
+    long = ("Saksham, that funny cat video won't help you crack DSA for placements! 🦁 Return to your code and "
+            "I'll guide you like a lion cub raised among sheep with Swamiji's wisdom today.")
+    assert brief(long) == "Saksham, that funny cat video won't help you crack DSA for placements! 🦁"
+    assert brief("Back to code, Saksham! You've got this.") == "Back to code, Saksham! You've got this."
