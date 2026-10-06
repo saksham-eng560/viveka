@@ -171,7 +171,7 @@ function ViewTabs({ view, onChange }: { view: View; onChange: (v: View) => void 
     refs.current[target.id]?.focus();
   };
   return (
-    <div role="tablist" aria-label="Lighthouse views" className="flex gap-1 rounded-[10px] border border-line bg-surface p-1">
+    <div role="tablist" aria-label="Sheru views" className="flex gap-1 rounded-[10px] border border-line bg-surface p-1">
       {VIEWS.map((v) => {
         const selected = v.id === view;
         return (
@@ -248,7 +248,7 @@ export function App() {
   if (!state) {
     return (
       <main className="p-4 text-sm text-muted">
-        {error ? `Could not reach the Lighthouse background: ${error}` : "Loading…"}
+        {error ? `Could not reach Sheru's background: ${error}` : "Loading…"}
       </main>
     );
   }
@@ -261,7 +261,7 @@ export function App() {
       <header className="flex items-center gap-2.5">
         <LogoMark />
         <div className="min-w-0">
-          <h1 className="m-0 font-serif text-xl font-semibold leading-[26px] text-heading">Lighthouse</h1>
+          <h1 className="m-0 font-serif text-xl font-semibold leading-[26px] text-heading">Sheru</h1>
           <p className="m-0 text-[11px] leading-[15px] text-muted">A quiet companion for focused work</p>
         </div>
       </header>

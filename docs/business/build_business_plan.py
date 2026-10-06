@@ -1,5 +1,5 @@
 """
-Builds docs/business/Lighthouse_Business_Plan.pdf
+Builds docs/business/Sheru_Business_Plan.pdf
 
 Every number shown in the PDF (charts, tables, prose) is derived from the
 single MODEL section below, so changing an assumption re-flows the whole
@@ -35,7 +35,7 @@ from reportlab.platypus.tableofcontents import TableOfContents
 HERE = Path(__file__).resolve().parent
 CHARTS = HERE / "charts"
 CHARTS.mkdir(exist_ok=True)
-PDF_PATH = HERE / "Lighthouse_Business_Plan.pdf"
+PDF_PATH = HERE / "Sheru_Business_Plan.pdf"
 TODAY = dt.date(2026, 10, 6)
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -405,7 +405,7 @@ def chart_infra():
     local = [0.40, 0.24, 0.15, 0.10]
     cloud = [1.60, 1.42, 1.27, 1.17]
     ax.plot(mau, cloud, color=S2, lw=2, marker="o", ms=7, mec="white", mew=1.5, label="Cloud-AI competitor model")
-    ax.plot(mau, local, color=S1, lw=2, marker="o", ms=7, mec="white", mew=1.5, label="Lighthouse local-first")
+    ax.plot(mau, local, color=S1, lw=2, marker="o", ms=7, mec="white", mew=1.5, label="Sheru local-first")
     ax.fill_between(mau, local, cloud, color=S1, alpha=0.07, lw=0)
     ax.set_xscale("log")
     ax.set_xticks(mau, ["1K", "10K", "100K", "1M"])
@@ -516,7 +516,7 @@ def chart_roadmap():
     for s in ax.spines.values():
         s.set_visible(False)
     from matplotlib.patches import Patch
-    ax.legend(handles=[Patch(color=S1, label="Product & platform"), Patch(color=S2, label="Lighthouse Mind"),
+    ax.legend(handles=[Patch(color=S1, label="Product & platform"), Patch(color=S2, label="Sheru Mind"),
                        Patch(color=S3, label="B2B")], loc="lower left", bbox_to_anchor=(0, -0.13), ncols=3)
     return _save(fig, "12_roadmap")
 
@@ -690,8 +690,8 @@ TBL_N = {}
 class Doc(BaseDocTemplate):
     def __init__(self, fn, **kw):
         super().__init__(fn, pagesize=A4, leftMargin=MARGIN, rightMargin=MARGIN, topMargin=22 * mm,
-                         bottomMargin=20 * mm, title="Lighthouse — Business Impact & Scalability Plan",
-                         author="Lighthouse", subject="Business plan, SaaS & Lighthouse Mind", **kw)
+                         bottomMargin=20 * mm, title="Sheru — Business Impact & Scalability Plan",
+                         author="Sheru", subject="Business plan, SaaS & Sheru Mind", **kw)
         frame = Frame(MARGIN, 20 * mm, CONTENT_W, PAGE_H - 42 * mm, id="f", leftPadding=0, rightPadding=0,
                       topPadding=0, bottomPadding=0)
         self.addPageTemplates([PageTemplate("cover", [frame], onPage=draw_cover),
@@ -754,14 +754,14 @@ def draw_cover(c, doc):
     c.drawString(x, PAGE_H - 40 * mm, "BUSINESS IMPACT  ·  SCALABILITY  ·  PRODUCT EXPANSION")
     c.setFillColor(colors.white)
     c.setFont("Arial-Bold", 44)
-    c.drawString(x, PAGE_H - 62 * mm, "Lighthouse")
+    c.drawString(x, PAGE_H - 62 * mm, "Sheru")
     c.setFont("Arial", 19)
     c.drawString(x, PAGE_H - 75 * mm, "From local focus coach to a")
     c.drawString(x, PAGE_H - 84 * mm, "privacy-first focus & mental-wellbeing")
     c.drawString(x, PAGE_H - 93 * mm, "SaaS platform")
     c.setFillColor(colors.HexColor("#c3cfe0"))
     c.setFont("Arial", 10.5)
-    lines = ["Business plan covering monthly psychologist care (Lighthouse Mind),",
+    lines = ["Business plan covering monthly psychologist care (Sheru Mind),",
              "SaaS subscriptions, five-year financial model and scaling options."]
     for i, l in enumerate(lines):
         c.drawString(x, PAGE_H - 108 * mm - i * 14, l)
@@ -940,17 +940,17 @@ def story():
     # ── 1 Executive summary
     s += H1("1", "Executive Summary", "Overview")
     s.append(P(
-        "Lighthouse today is a working, privacy-first focus coach. A Chrome MV3 extension classifies every tab "
+        "Sheru today is a working, privacy-first focus coach. A Chrome MV3 extension classifies every tab "
         "against the user's goal using a <b>local</b> LLM (Ollama), nudges them in real time, and the Pulse "
         "backend turns ActivityWatch data into focus analytics and AI stand-ups. This plan turns it into a "
         "business on three layers:", "lead"))
     s += B([
         "<b>SaaS subscriptions</b>. A free local tier stays free forever. Pro, Teams and Enterprise "
         "tiers add opt-in end-to-end-encrypted sync, a hosted dashboard, integrations and admin tools.",
-        "<b>Lighthouse Mind</b>. A monthly subscription that pairs each member with a licensed psychologist. "
+        "<b>Sheru Mind</b>. A monthly subscription that pairs each member with a licensed psychologist. "
         "It includes one 50-minute video session a month, async check-ins and a consent-based <i>Focus Report</i>, "
         "so therapy is grounded in real attention data instead of memory.",
-        "<b>Enterprise Wellbeing</b>. Employers buy Lighthouse + pooled psychologist access as a focus and "
+        "<b>Enterprise Wellbeing</b>. Employers buy Sheru + pooled psychologist access as a focus and "
         "burnout benefit. They see only anonymised aggregates, never individual browsing.",
     ])
     s.append(Spacer(1, 6))
@@ -963,13 +963,13 @@ def story():
     ])
     s.append(H2("Why this works", toc=False))
     s += B([
-        "<b>Structural cost advantage.</b> Classification runs on the user's own machine, so Lighthouse pays "
+        "<b>Structural cost advantage.</b> Classification runs on the user's own machine, so Sheru pays "
         "nothing for AI inference. Cloud-AI rivals pay roughly $1 per active user per month (Section 10). This keeps "
         f"software gross margin near 90% and lets the free tier scale to {num(USERS_END[-1])} users cheaply.",
         "<b>Trust is the product.</b> In mental health and workplace tools, privacy is the purchase criterion. "
-        "Lighthouse can truthfully say raw browsing never leaves the device.",
+        "Sheru can truthfully say raw browsing never leaves the device.",
         "<b>Data-informed care is differentiated.</b> Few therapy platforms see objective attention patterns. "
-        "Lighthouse Mind gives psychologists a weekly picture of focus, context switching and late-night "
+        "Sheru Mind gives psychologists a weekly picture of focus, context switching and late-night "
         "work, and turns their advice into in-browser nudges.",
         "<b>Land-and-expand.</b> Individual users bring the product into teams. Teams graduate to Enterprise "
         f"Wellbeing. By 2031, {(M['rev_teams'][-1] + M['rev_ent'][-1]) / rev5:.0%} of revenue is B2B.",
@@ -980,7 +980,7 @@ def story():
                  "used to validate retention and willingness to pay before scaling.")
 
     # ── 2 Current state
-    s += H1("2", "Where Lighthouse Stands Today", "Starting point")
+    s += H1("2", "Where Sheru Stands Today", "Starting point")
     s.append(P("The repository already contains a functional, tested MVP across three apps. That matters "
                "commercially: most of the hard, differentiating work (local classification, nudges, analytics) "
                "is done. The work ahead is mostly the commercial shell around it."))
@@ -1033,7 +1033,7 @@ def story():
 
     # ── 4 Business impact
     s += H1("4", "Business Impact", "Impact")
-    s.append(P("Lighthouse creates value for four parties. The numbers below are the economic case each buyer will "
+    s.append(P("Sheru creates value for four parties. The numbers below are the economic case each buyer will "
                "test, and the pilot programme (Section 13) is designed to measure them directly."))
     s.append(H2("For individual users"))
     s.append(P("Even modest recovered focus time pays for the subscription many times over. At 25 minutes a day "
@@ -1066,7 +1066,7 @@ def story():
         "<b>Homework that actually runs.</b> Goals set in session become live nudges in the browser. "
         "This closes the gap between the therapy room and the workday.",
     ])
-    s.append(H2("For Lighthouse as a company"))
+    s.append(H2("For Sheru as a company"))
     s += B([
         "Mind raises ARPU about 7× over Pro and creates the strongest switching cost: a relationship with a clinician.",
         "B2B tiers bring low churn (1–1.5% monthly) and annual contracts, which stabilise cash flow.",
@@ -1075,11 +1075,11 @@ def story():
     ])
 
     # ── 5 Mind
-    s += H1("5", "Lighthouse Mind — Monthly Psychologist Care", "New feature")
-    s.append(P("Lighthouse Mind is the flagship new feature. Members get a monthly relationship with a matched "
+    s += H1("5", "Sheru Mind — Monthly Psychologist Care", "New feature")
+    s.append(P("Sheru Mind is the flagship new feature. Members get a monthly relationship with a matched "
                "psychologist who specialises in attention, ADHD, burnout or performance anxiety. The extension "
                "becomes the bridge between sessions.", "lead"))
-    s.extend(fig(charts["cycle"], "The Lighthouse Mind monthly care loop.", width=CONTENT_W))
+    s.extend(fig(charts["cycle"], "The Sheru Mind monthly care loop.", width=CONTENT_W))
     s.append(H2("What a member gets each month"))
     s += table([
         ["Component", "Detail"],
@@ -1201,7 +1201,7 @@ def story():
 
     # ── 8 Architecture
     s += H1("8", "SaaS Architecture & Privacy Model", "Technology")
-    s.append(P("The core principle is <b>local-first, consent-based sync</b>. Everything Lighthouse does today keeps "
+    s.append(P("The core principle is <b>local-first, consent-based sync</b>. Everything Sheru does today keeps "
                "running on the device with no account. The cloud layer is additive and only ever receives what "
                "the user explicitly allows, encrypted on-device."))
     s.extend(fig(charts["arch"], "Target architecture. The left zone is today's repository; centre and right are new."))
@@ -1265,7 +1265,7 @@ def story():
 
     # ── 10 Scalability
     s += H1("10", "Scalability Options", "Scale")
-    s.append(P("Scaling Lighthouse is unusual. The expensive part of most AI products, inference, does not "
+    s.append(P("Scaling Sheru is unusual. The expensive part of most AI products, inference, does not "
                "grow with users here. The constraints that do grow are sync storage, video, clinician supply "
                "and compliance. Each needs its own scaling plan."))
     s.append(H2("10.1 Technical scaling stages"))
@@ -1313,7 +1313,7 @@ def story():
     ], [0.19, 0.28, 0.135, 0.125, 0.11, 0.16], bold_first_col=True, caption="Table 10.2 — Scaling options compared")
     s += callout("Recommended sequence",
                  "A → B → C, with D opened opportunistically. Prove Mind retention in India (A), let users pull "
-                 "Lighthouse into their teams (B), then turn anonymised outcome data into the Enterprise Wellbeing "
+                 "Sheru into their teams (B), then turn anonymised outcome data into the Enterprise Wellbeing "
                  "sale (C). Expand geographically (F) only once clinical operations are repeatable.", color=S1)
 
     # ── 11 GTM
@@ -1326,7 +1326,7 @@ def story():
         ["Developer community", "Open-source local engine, GitHub, Hacker News, Product Hunt launch", "Free → Pro"],
         ["ADHD & mental-health creators", "Partnerships with creators and communities; psychologist-led "
          "webinars", "Mind"],
-        ["Psychologist referrals", "Clinicians invite existing clients to use Lighthouse between sessions",
+        ["Psychologist referrals", "Clinicians invite existing clients to use Sheru between sessions",
          "Mind"],
         ["Campus programmes", "Student ambassadors, exam-season campaigns, institutional licences", "Pro"],
         ["Product-led B2B", "“Invite your team” in-product, team trials, usage-based expansion", "Teams"],
@@ -1338,7 +1338,7 @@ def story():
     s += H1("12", "Compliance, Privacy & Risk", "Governance")
     s.append(H2("12.1 Regulatory map"))
     s += table([
-        ["Jurisdiction", "Regime", "What it requires of Lighthouse"],
+        ["Jurisdiction", "Regime", "What it requires of Sheru"],
         ["India", "Digital Personal Data Protection Act 2023 (+ Rules)", "Notice & consent, purpose "
          "limitation, data-principal rights, breach reporting, grievance officer"],
         ["India", "Mental Healthcare Act 2017; RCI norms", "Confidentiality of mental-health information; "
@@ -1428,7 +1428,7 @@ def story():
         "Song P. et al., <i>Journal of Global Health</i> (2021): global prevalence of adult ADHD (persistent ≈ 2.6%; "
         "symptomatic ≈ 6.8%).",
         "WHO-5 Well-Being Index and the WHO Adult ADHD Self-Report Scale (ASRS v1.1) are publicly available "
-        "screening instruments. Lighthouse uses them only for non-diagnostic self-tracking.",
+        "screening instruments. Sheru uses them only for non-diagnostic self-tracking.",
         "Helplines: India Tele-MANAS 14416; US 988 Suicide &amp; Crisis Lifeline.",
         "Before external use, verify these figures against the latest editions. Financial projections are "
         "illustrative planning estimates, not forecasts or guarantees. Regulatory points are a starting checklist, "

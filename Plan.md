@@ -1,7 +1,9 @@
-# Lighthouse: The AI-Powered Web Productivity Companion
+# Sheru: The AI-Powered Web Productivity Companion
+
+> Original product plan. The project was renamed from *Lighthouse* to *Sheru*; see the README for what was built.
 
 ## 1. Project Identity
-**Project Name:** Lighthouse  
+**Project Name:** Sheru  
 **Tagline:** Your privacy-first, local AI focus coach. Stop analyzing past distractions; start preventing them in real-time.  
 
 **Problem Statement:**  
@@ -10,10 +12,10 @@
 3. **The Privacy vs. Intelligence Dilemma:** Cloud-based AI assistants require sending your entire browsing history and screen data to external servers, violating user trust.
 
 ## 2. Product Vision
-**What it is:** Lighthouse is an intelligent, HeyClicky-inspired web companion built on top of the ActivityWatch open-source infrastructure. It operates directly in your browser, using local AI to understand the *context* of your browsing, proactively nudge you away from distractions, and synthesize your work sessions into actionable insights.
+**What it is:** Sheru is an intelligent, HeyClicky-inspired web companion built on top of the ActivityWatch open-source infrastructure. It operates directly in your browser, using local AI to understand the *context* of your browsing, proactively nudge you away from distractions, and synthesize your work sessions into actionable insights.
 
 **How it's different:**  
-- **Proactive, not Passive:** Instead of charts at the end of the day, Lighthouse provides gentle, real-time overlays and side-panel interactions when you stray off-task.  
+- **Proactive, not Passive:** Instead of charts at the end of the day, Sheru provides gentle, real-time overlays and side-panel interactions when you stray off-task.  
 - **Context-Aware, not Domain-Aware:** Uses on-device LLMs (Ollama with Llama 3 / Phi-3) to analyze page titles and URLs dynamically to determine intent based on a user's *current goal*.  
 - **Zero-Cloud Privacy:** Built on ActivityWatch's local SQLite architecture and local AI. No data leaves your machine.  
 
@@ -22,13 +24,13 @@
 - **The privacy-conscious developer:** Wants intelligent analytics but refuses to use invasive cloud surveillance tools.  
 
 **Core User Journeys:**  
-- **The Gentle Nudge:** User starts reading HackerNews during a designated "Deep Work" sprint. Lighthouse smoothly slides in a visual overlay: "Taking a break, or did we get distracted? You have 25 mins left in your Deep Work block."  
+- **The Gentle Nudge:** User starts reading HackerNews during a designated "Deep Work" sprint. Sheru smoothly slides in a visual overlay: "Taking a break, or did we get distracted? You have 25 mins left in your Deep Work block."  
 - **The Context Reset:** User gets lost in a 30-tab sprawl. Opening the Chrome Side Panel provides an AI summary of what they were *actually* trying to do, suggesting closing irrelevant tabs.
-- **The Standup Generator:** User finishes the day. Lighthouse synthesizes all ActivityWatch events and outputs: "Drafting your standup notes based on today's PR reviews and Slack discussions..."
+- **The Standup Generator:** User finishes the day. Sheru synthesizes all ActivityWatch events and outputs: "Drafting your standup notes based on today's PR reviews and Slack discussions..."
 
 ## 3. Competitive Differentiation
 
-| Feature | Lighthouse | RescueTime | ActivityWatch (Base) | HeyClicky |
+| Feature | Sheru | RescueTime | ActivityWatch (Base) | HeyClicky |
 | :--- | :--- | :--- | :--- | :--- |
 | **Real-time Nudges** | ✅ Yes (DOM overlays) | ❌ No (Retrospective) | ❌ No (Passive) | ✅ Yes |
 | **Context-Aware AI** | ✅ Yes (Dynamic intent) | ❌ No (Static categories) | ❌ No | ✅ Yes |
@@ -143,7 +145,7 @@ interface DistractionEvent {
 }
 
 // ActivityWatch Event Payload
-interface LighthouseAWEvent {
+interface SheruAWEvent {
   timestamp: string; // ISO 8601
   duration: number;
   data: {
@@ -378,7 +380,7 @@ LLM_MODEL=llama3
 Copy and paste the following prompt into your AI development assistant to generate the entire project:
 
 ```text
-You are an expert full-stack developer. Build "Lighthouse", a privacy-first, local AI web productivity companion. 
+You are an expert full-stack developer. Build "Sheru", a privacy-first, local AI web productivity companion. 
 The system consists of three parts: a Chrome MV3 Extension, a FastAPI Analytics Backend, and a React Dashboard. 
 All data stays local, integrating with `aw-server-rust` and `Ollama`.
 

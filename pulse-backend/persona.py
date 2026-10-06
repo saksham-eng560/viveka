@@ -27,6 +27,18 @@ PERSONA = (
     "with gentle humour and at most one emoji. You care about the user's goals."
 )
 
+# How Sheru speaks, chosen in Settings (added to the persona for model-written lines and chat).
+PERSONALITIES = {
+    "gentle": " Right now be extra gentle and calm: soft words, no teasing, few exclamation marks.",
+    "playful": "",
+    "coach": " Right now be an upbeat coach: direct, energetic and short, still kind and never harsh.",
+}
+
+
+def persona(personality: str = "playful") -> str:
+    return PERSONA + PERSONALITIES.get(personality, "")
+
+
 TEMPLATES: dict[str, list[str]] = {
     "greeting": [
         "Namaste, {name}! 🙏 I'm Sheru. Today we chase: {goal}. I'll sit right here.",
@@ -201,7 +213,8 @@ class Brain:
 
     # ---------------------------------------------------------------- tasks
     async def line(self, kind: str, *, name: str, age: Optional[int], goal: str, label: str, minutes: str,
-                   title: str = "", place: str = "tab", timeout: float = 6.0) -> Optional[str]:
+                   title: str = "", place: str = "tab", personality: str = "playful",
+                   timeout: float = 6.0) -> Optional[str]:
         situations = {
             "distraction1": f"{name} has been on {label} for {minutes} instead of working on '{goal}'. "
                             f"Gently and playfully tell them this looks like the wrong {place} for their goal "
@@ -218,7 +231,7 @@ class Brain:
                   f"Situation: {situations[kind]}\nReply with ONE sentence under 24 words, speaking directly to {name} "
                   f"(call them {name}; Swamiji is Swami Vivekananda, never the user). No quotation marks.")
         # a little cooler than chat: short alert lines from a small model drift into nonsense when too "creative"
-        text = await self.generate(PERSONA, prompt, timeout=timeout, num_predict=70, temperature=0.6)
+        text = await self.generate(persona(personality), prompt, timeout=timeout, num_predict=70, temperature=0.6)
         if not text:
             return None
         line = brief(clean_line(text))
@@ -262,9 +275,10 @@ class Brain:
         return Verdict(kind, (cat[:1].upper() + cat[1:].lower()) or "Other",
                        str(data.get("reason", ""))[:160] or "Judged by your local model.", source="llm")
 
-    async def chat(self, message: str, history: list[dict[str, str]], context: str, timeout: float = 25.0) -> str:
+    async def chat(self, message: str, history: list[dict[str, str]], context: str, timeout: float = 25.0,
+                   personality: str = "playful") -> str:
         convo = "\n".join(f"{'User' if h['role'] == 'user' else 'Sheru'}: {h['text']}" for h in history[-6:])
-        system = (PERSONA + " Answer in at most 3 short sentences. If asked about Swami Vivekananda, be accurate and "
+        system = (persona(personality) + " Answer in at most 3 short sentences. If asked about Swami Vivekananda, be accurate and "
                   "humble; do not invent quotes. You can suggest a focus sprint or a break. Context about the user: "
                   + context)
         text = await self.generate(system, (convo + "\n" if convo else "") + f"User: {message}\nSheru:",

@@ -29,3 +29,4 @@ dashboard/public/sheru.svg
 # buddy app build output and local data
 buddy/build/
 .data/
+.models/

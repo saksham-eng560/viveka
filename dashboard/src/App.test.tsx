@@ -6,10 +6,11 @@ vi.mock("./lib/api", async () => {
   return {
     ...actual, getSummary: vi.fn(), getTimeline: vi.fn(), getHealth: vi.fn(), generateStandup: vi.fn(),
     getProfile: vi.fn(), getToday: vi.fn(), getCatalog: vi.fn(), saveProfile: vi.fn(), buddyAction: vi.fn(),
+    getSettings: vi.fn(), saveSettings: vi.fn(),
   };
 });
 
-import { getCatalog, getHealth, getProfile, getSummary, getTimeline, getToday } from "./lib/api";
+import { getCatalog, getHealth, getProfile, getSettings, getSummary, getTimeline, getToday } from "./lib/api";
 import type { Profile } from "./lib/types";
 
 export const PROFILE: Profile = {
@@ -68,7 +69,7 @@ describe("App", () => {
     render(<App />);
     expect(await screen.findByText("Local model")).toBeInTheDocument();
     expect(screen.queryByText("Ollama")).not.toBeInTheDocument();
-    expect(screen.getByText(/Everything stays on this machine/)).toBeInTheDocument();
+    expect(screen.getByText(/Sheru keeps everything on this machine/)).toBeInTheDocument();
   });
 
   it("shows a quote and attribution on an empty day", async () => {
@@ -111,6 +112,18 @@ describe("App", () => {
     render(<App />);
     expect(await screen.findByText("Hello again!")).toBeInTheDocument();
     expect(screen.getByPlaceholderText("Your name")).toHaveValue("Saksham Verma");
+  });
+
+  it("switches between Today and Settings, and opens Settings from ?view=settings", async () => {
+    vi.mocked(getSettings).mockRejectedValue(new Error("Set up Sheru first (onboarding)"));
+    render(<App />);
+    const tab = await screen.findByRole("tab", { name: "Settings" });
+    tab.click();
+    expect(await screen.findByRole("alert")).toHaveTextContent("Set up Sheru first");
+    expect(window.location.search).toBe("?view=settings");
+    (await screen.findByRole("tab", { name: "Today" })).click();
+    expect(await screen.findByText("Sheru is with you, Saksham")).toBeInTheDocument();
+    expect(window.location.search).toBe("");
   });
 
   it("shows backend error detail", async () => {

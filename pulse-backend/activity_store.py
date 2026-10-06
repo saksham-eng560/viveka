@@ -58,7 +58,13 @@ class Segment:
 
 class ActivityStore:
     def __init__(self, data_dir: str | Path) -> None:
-        self.path = Path(data_dir) / "lighthouse.db"
+        self.path = Path(data_dir) / "sheru.db"
+        legacy = Path(data_dir) / "lighthouse.db"  # name used before the project became Sheru
+        if legacy.exists() and not self.path.exists():
+            try:
+                legacy.replace(self.path)
+            except OSError:
+                self.path = legacy
         self._conn: Optional[sqlite3.Connection] = None
 
     @property

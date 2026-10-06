@@ -1,4 +1,4 @@
-"""Lighthouse Pulse backend. Run: uvicorn main:app --port 8000"""
+"""Sheru backend (his brain + day analytics). Run: uvicorn main:app --port 8000"""
 from __future__ import annotations
 
 import asyncio
@@ -10,13 +10,13 @@ from typing import Any, AsyncIterator, Literal, Optional, cast
 import httpx
 from fastapi import FastAPI, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.responses import JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import Field
 
 from aw_queries import compute_summary, fetch_events, to_timeline
-from catalog import catalog_payload
-from coach import BrowserSample, DesktopSample, get_coach
+from catalog import VerdictKind, catalog_payload
+from coach import PACES, BrowserSample, DesktopSample, get_coach
 from config import Settings, get_settings
 from llm_service import generate_standup
 from models import (
@@ -30,24 +30,30 @@ from models import (
     StandupRequest,
     TimelineResponse,
 )
-from profile_store import ProfileIn
+from profile_store import Pace, ProfileIn, QuoteFrequency, SheruSettings
 from vivekananda import WisdomPicker
+from voice import SYSTEM_VOICE, VoiceUnavailable, effective_speed, get_voice
 
 BUDDY_WEB = Path(__file__).resolve().parent.parent / "buddy" / "web"
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
-    task = asyncio.create_task(get_coach().run())
+    coach = get_coach()
+    coach.voice = get_voice()
+    coach.warm_voice()
+    task = asyncio.create_task(coach.run())
     try:
         yield
     finally:
         task.cancel()
         with suppress(asyncio.CancelledError):
             await task
+        get_voice().shutdown()
 
 
-app = FastAPI(title="Lighthouse Pulse", version="2.0.0", lifespan=lifespan)
+app = FastAPI(title="Sheru", version="3.0.0", lifespan=lifespan,
+              description="Sheru's brain: the focus coach, onboarding profile, settings, voice and day analytics.")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 if BUDDY_WEB.is_dir():
     app.mount("/buddy", StaticFiles(directory=BUDDY_WEB, html=True), name="buddy")
@@ -224,3 +230,113 @@ async def wisdom(kind: Literal["quote", "fact", "any"] = "any") -> dict[str, Any
 async def today() -> dict[str, Any]:
     coach = get_coach()
     return {**coach.today(), "state": coach.state(since=10**9)}
+
+
+# ------------------------------------------------------------------------- settings
+class NeedsProfile(PulseError):
+    status_code = 409
+
+
+_TIMING_KEYS = ("headsup", "distraction", "repeat", "stall", "afk", "snooze", "break_len")
+
+
+def _timings(pace: object) -> dict[str, float]:
+    return {to_camel_key(k): float(getattr(pace, k)) for k in _TIMING_KEYS}
+
+
+def to_camel_key(key: str) -> str:
+    head, *rest = key.split("_")
+    return head + "".join(part.title() for part in rest)
+
+
+class SettingsIn(CamelModel):
+    settings: Optional[SheruSettings] = None
+    pace: Optional[Pace] = None
+    quotes: Optional[QuoteFrequency] = None
+    voice: Optional[bool] = None  # speak out loud
+    sounds: Optional[bool] = None
+    overrides: Optional[dict[str, VerdictKind]] = Field(default=None, max_length=500)
+
+
+def _settings_payload() -> dict[str, Any]:
+    coach = get_coach()
+    p = coach.profile
+    if p is None:
+        raise NeedsProfile("Set up Sheru first (onboarding)")
+    return {
+        "settings": p.settings.model_dump(by_alias=True),
+        "pace": p.pace,
+        "quotes": p.quotes,
+        "voice": p.voice,
+        "sounds": p.sounds,
+        "overrides": p.overrides,
+        "effective": _timings(coach.pace),
+        "presets": {name: _timings(preset) for name, preset in PACES.items()},
+        "voiceEngine": get_voice().status(),
+    }
+
+
+@app.get("/api/settings")
+async def get_settings_view() -> dict[str, Any]:
+    return _settings_payload()
+
+
+@app.put("/api/settings")
+async def put_settings(body: SettingsIn) -> dict[str, Any]:
+    coach = get_coach()
+    if coach.profile is None:
+        raise NeedsProfile("Set up Sheru first (onboarding)")
+    fields: dict[str, Any] = {}
+    if body.settings is not None:
+        fields["settings"] = body.settings.model_dump()
+    for name in ("pace", "quotes", "voice", "sounds"):
+        value = getattr(body, name)
+        if value is not None:
+            fields[name] = value
+    if body.overrides is not None:
+        fields["overrides"] = {k: v for k, v in body.overrides.items() if k.startswith(("web:", "app:"))}
+    if fields:
+        coach.profiles.update(**fields)
+        coach.settings_changed()
+    return _settings_payload()
+
+
+@app.delete("/api/history")
+async def delete_history() -> dict[str, Any]:
+    coach = get_coach()
+    coach.store.clear()
+    coach.messages.clear()
+    coach.settings_changed()
+    return {"ok": True}
+
+
+# ---------------------------------------------------------------------------- voice
+class SayIn(CamelModel):
+    text: str = Field(min_length=1, max_length=400)
+    voice: Optional[str] = Field(default=None, max_length=40)
+    speed: Optional[float] = Field(default=None, ge=0.5, le=2.0)
+    pitch: Optional[float] = Field(default=None, ge=-20, le=40)
+
+
+@app.get("/api/voice")
+async def voice_status() -> dict[str, Any]:
+    return get_voice().status()
+
+
+@app.post("/api/voice/say")
+async def voice_say(body: SayIn) -> Response:
+    """WAV for one chunk of speech; uses the saved voice settings unless the request overrides them (preview)."""
+    coach = get_coach()
+    saved = coach.prefs.voice
+    voice = body.voice or saved.voice
+    if voice != SYSTEM_VOICE and not voice.replace("_", "").isalnum():
+        voice = saved.voice
+    speed = effective_speed(body.speed if body.speed is not None else saved.speed,
+                            body.pitch if body.pitch is not None else saved.pitch)
+    try:
+        audio = await get_voice().speak(body.text.strip(), voice, speed)
+    except VoiceUnavailable as exc:
+        return JSONResponse(status_code=503, content={"detail": str(exc)})
+    except Exception:  # never 500 the buddy over audio
+        return JSONResponse(status_code=503, content={"detail": "speech failed"})
+    return Response(content=audio, media_type="audio/wav", headers={"Cache-Control": "private, max-age=3600"})

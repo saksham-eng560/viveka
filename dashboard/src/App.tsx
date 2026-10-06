@@ -7,6 +7,7 @@ import { CategoryBreakdown } from "./features/CategoryBreakdown";
 import { MetricCards } from "./features/MetricCards";
 import { StandupGenerator } from "./features/StandupGenerator";
 import { Onboarding } from "./features/Onboarding";
+import { SettingsPage } from "./features/SettingsPage";
 import { SheruPanel } from "./features/SheruPanel";
 import { StatusBar } from "./features/StatusBar";
 import { TimelineChart } from "./features/TimelineChart";
@@ -16,12 +17,15 @@ import { quoteFor } from "./lib/quotes";
 import type { DailySummaryResponse, HealthResponse, Profile, TimelineResponse } from "./lib/types";
 
 const wantsOnboarding = () => new URLSearchParams(window.location.search).has("onboarding");
+type View = "today" | "settings";
+const initialView = (): View => (new URLSearchParams(window.location.search).get("view") === "settings" ? "settings" : "today");
 
 /** Root: first run (no profile) or ?onboarding=1 shows the onboarding; otherwise the dashboard. */
 export default function App() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [checked, setChecked] = useState(false);
   const [onboarding, setOnboarding] = useState(wantsOnboarding);
+  const [view, setView] = useState<View>(initialView);
 
   useEffect(() => {
     getProfile()
@@ -33,6 +37,13 @@ export default function App() {
       .finally(() => setChecked(true));
   }, []);
 
+  const changeView = (next: View) => {
+    setView(next);
+    window.history.replaceState(null, "", next === "settings" ? "/?view=settings" : window.location.pathname);
+    // Settings may have changed the pace etc.: refresh the profile the Today view shows
+    if (next === "today") getProfile().then((r) => r.profile && setProfile(r.profile)).catch(() => undefined);
+  };
+
   const closeOnboarding = (p: Profile | null) => {
     if (p) setProfile(p);
     setOnboarding(false);
@@ -43,10 +54,20 @@ export default function App() {
   if (onboarding) {
     return <Onboarding initial={profile} onDone={(p) => closeOnboarding(p)} onCancel={profile ? () => closeOnboarding(null) : undefined} />;
   }
-  return <Dashboard profile={profile} onProfile={setProfile} onEditGoals={() => setOnboarding(true)} />;
+  return (
+    <Dashboard profile={profile} onProfile={setProfile} onEditGoals={() => setOnboarding(true)} view={profile ? view : "today"}
+      onView={changeView} onStartOver={() => { setProfile(null); setView("today"); setOnboarding(true); }} />
+  );
 }
 
-function Dashboard({ profile, onProfile, onEditGoals }: { profile: Profile | null; onProfile: (p: Profile) => void; onEditGoals: () => void }) {
+function Dashboard({ profile, onProfile, onEditGoals, view, onView, onStartOver }: {
+  profile: Profile | null;
+  onProfile: (p: Profile) => void;
+  onEditGoals: () => void;
+  view: View;
+  onView: (v: View) => void;
+  onStartOver: () => void;
+}) {
   const [date, setDate] = useState(() => toDateInputValue(new Date()));
   const [summary, setSummary] = useState<DailySummaryResponse | null>(null);
   const [timeline, setTimeline] = useState<TimelineResponse | null>(null);
@@ -93,37 +114,43 @@ function Dashboard({ profile, onProfile, onEditGoals }: { profile: Profile | nul
       <header className="sticky top-0 z-10 border-b border-line bg-bg">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-6 gap-y-3 px-4 py-3 sm:px-6">
           <div className="flex items-center gap-3">
-            <span className="flex h-9 w-9 items-center justify-center rounded-(--lh-radius-sm) border border-line bg-[#FBF3E4]" aria-hidden="true">
-              <svg width="22" height="22" viewBox="0 0 24 24">
-                <path d="M12 2l3.5 6h-7z" fill="#7A2E1D" />
-                <circle cx="12" cy="5.4" r="1.1" fill="#E8730C" />
-                <path d="M9.5 9.5h5L16 22H8z" fill="#7A2E1D" />
-                <path d="M9.9 13h4.2l.4 2.2H9.5z" fill="#FBF3E4" />
-                <path d="M9.1 17.2h5.8l.3 2H8.8z" fill="#B8860B" />
-              </svg>
-            </span>
+            <img src="/sheru.svg" alt="" width={36} height={42} aria-hidden="true" />
             <div>
-              <h1 className="font-serif text-[22px] leading-7 font-semibold text-heading">Lighthouse Pulse</h1>
-              <p className="text-xs text-muted">Your day, in focus</p>
+              <h1 className="font-serif text-[22px] leading-7 font-semibold text-heading">Sheru</h1>
+              <p className="text-xs text-muted">Your focus buddy</p>
             </div>
+            {profile && (
+              <nav role="tablist" aria-label="Sections" className="ml-2 inline-flex rounded-full border border-line bg-surface p-0.5">
+                {(["today", "settings"] as const).map((v) => (
+                  <button key={v} type="button" role="tab" aria-selected={view === v} onClick={() => onView(v)}
+                    className={`cursor-pointer rounded-full px-3.5 py-1 text-sm font-semibold transition-colors ${view === v ? "bg-primary text-primary-fg" : "text-ink hover:bg-bg"}`}>
+                    {v === "today" ? "Today" : "Settings"}
+                  </button>
+                ))}
+              </nav>
+            )}
           </div>
           <div className="flex flex-wrap items-center gap-3">
-            {source === "sample" && <Badge variant="saffron">Sample data</Badge>}
+            {view === "today" && source === "sample" && <Badge variant="saffron">Sample data</Badge>}
             <StatusBar health={health} error={healthError} />
-            <label className="sr-only" htmlFor="date">
-              Date
-            </label>
-            <input
-              id="date"
-              type="date"
-              value={date}
-              max={toDateInputValue(new Date())}
-              onChange={(e) => e.target.value && setDate(e.target.value)}
-              className="h-9 rounded-(--lh-radius-sm) border border-line-strong bg-bg px-3 text-sm text-ink"
-            />
-            <Button variant="outline" size="sm" onClick={() => void load(date)} disabled={loading} aria-label="Refresh data">
-              {loading ? "Refreshing..." : "Refresh"}
-            </Button>
+            {view === "today" && (
+              <>
+                <label className="sr-only" htmlFor="date">
+                  Date
+                </label>
+                <input
+                  id="date"
+                  type="date"
+                  value={date}
+                  max={toDateInputValue(new Date())}
+                  onChange={(e) => e.target.value && setDate(e.target.value)}
+                  className="h-9 rounded-(--lh-radius-sm) border border-line-strong bg-bg px-3 text-sm text-ink"
+                />
+                <Button variant="outline" size="sm" onClick={() => void load(date)} disabled={loading} aria-label="Refresh data">
+                  {loading ? "Refreshing..." : "Refresh"}
+                </Button>
+              </>
+            )}
             <Button variant="primary" size="sm" onClick={onEditGoals}>
               {profile ? "Edit goals" : "Set up Sheru"}
             </Button>
@@ -131,6 +158,11 @@ function Dashboard({ profile, onProfile, onEditGoals }: { profile: Profile | nul
         </div>
       </header>
 
+      {view === "settings" && profile ? (
+        <main className="mx-auto max-w-4xl px-4 py-6 sm:px-6">
+          <SettingsPage profile={profile} onEditGoals={onEditGoals} onStartOver={onStartOver} />
+        </main>
+      ) : (
       <main className="mx-auto max-w-6xl space-y-6 px-4 py-6 sm:px-6">
         {profile && <SheruPanel profile={profile} onProfile={onProfile} />}
         {error && (
@@ -166,9 +198,10 @@ function Dashboard({ profile, onProfile, onEditGoals }: { profile: Profile | nul
         )}
         {error && <StandupGenerator date={date} />}
       </main>
+      )}
 
       <footer className="mx-auto max-w-6xl px-4 pb-8 text-center text-xs text-muted sm:px-6">
-        Everything stays on this machine: your browsing data and the local model that writes your notes.
+        Sheru keeps everything on this machine: your activity, your settings and the local model that writes his lines.
       </footer>
     </div>
   );

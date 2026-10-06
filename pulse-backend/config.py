@@ -29,6 +29,7 @@ class Settings:
     llm_timeout_seconds: float = 120.0
     # Sheru, the desktop buddy (coach engine)
     data_dir: str = str(_HERE.parent / ".data")
+    models_dir: str = str(_HERE.parent / ".models")
     buddy_model: str = "sheru"
     llm_classify: bool = True
     coach_tick_seconds: float = 1.0
@@ -62,7 +63,9 @@ def get_settings() -> Settings:
         standup_fallback=_choice("STANDUP_FALLBACK", "template", _FALLBACKS),
         aw_bucket_prefix=_env("AW_BUCKET_PREFIX", "aw-watcher-web-lighthouse"),
         llm_timeout_seconds=_float("LLM_TIMEOUT_SECONDS", 120.0),
-        data_dir=_env("LIGHTHOUSE_DATA_DIR", str(_HERE.parent / ".data")),
+        # SHERU_* names; the older LIGHTHOUSE_* names keep working
+        data_dir=_env("SHERU_DATA_DIR", _env("LIGHTHOUSE_DATA_DIR", str(_HERE.parent / ".data"))),
+        models_dir=_env("SHERU_MODELS_DIR", str(_HERE.parent / ".models")),
         buddy_model=_env("BUDDY_MODEL", "sheru"),
         llm_classify=_env("LLM_CLASSIFY", "on").lower() not in ("0", "off", "false", "no"),
         coach_tick_seconds=_float("COACH_TICK_SECONDS", 1.0),

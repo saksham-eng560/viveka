@@ -1,9 +1,9 @@
 {
-  "name": "lighthouse-extension",
-  "version": "2.0.0",
+  "name": "sheru-extension",
+  "version": "3.0.0",
   "private": true,
   "type": "module",
-  "description": "Lighthouse Chrome MV3 extension - a calm, private focus companion",
+  "description": "Sheru Chrome MV3 extension: a friendly, private focus buddy",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

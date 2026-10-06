@@ -171,7 +171,7 @@ export function ExtensionsView() {
           <>
             <SectionTitle>Your extensions</SectionTitle>
             <p className="m-0 text-sm text-ink">
-              To list your extensions and switch them on or off, Lighthouse asks Chrome for permission to manage extensions. It never
+              To list your extensions and switch them on or off, Sheru asks Chrome for permission to manage extensions. It never
               reads your pages, and nothing leaves your device.
             </p>
             <Button variant="primary" className="mt-3 w-full" onClick={() => void m.requestAccess()}>

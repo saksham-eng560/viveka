@@ -55,7 +55,7 @@ export interface ErrorBody {
 
 // ---- Sheru (coach) contract: pulse-backend/main.py, profile_store.py, coach.py
 export type Pace = "gentle" | "balanced" | "demo";
-export type QuoteFrequency = "often" | "sometimes" | "rarely";
+export type QuoteFrequency = "often" | "sometimes" | "rarely" | "off";
 
 export interface ProfileInput {
   name: string;
@@ -150,4 +150,48 @@ export interface TodayResponse {
   alerts: TodayAlert[];
   alertCount: number;
   state: BuddyState;
+}
+
+// ---- Settings tab contract: pulse-backend/main.py (/api/settings, /api/voice)
+export type Personality = "gentle" | "playful" | "coach";
+export type TimingKey = "headsup" | "distraction" | "repeat" | "stall" | "afk" | "snooze" | "breakLen";
+export type Timings = Record<TimingKey, number>;
+
+export interface SheruSettings {
+  timings: Partial<Record<TimingKey, number | null>>;
+  detectors: { headsup: boolean; detour: boolean; stall: boolean; hopping: boolean; streak: boolean; welcomeBack: boolean };
+  voice: { voice: string; speed: number; pitch: number; volume: number; speak: "important" | "everything" };
+  personality: Personality;
+  useAi: boolean;
+  showStatusChip: boolean;
+}
+
+export interface VoiceStatus {
+  engine: "neural" | "system" | "none";
+  neuralInstalled: boolean;
+  loaded: boolean;
+  error: string | null;
+  defaultVoice: string;
+  voices: { id: string; label: string }[];
+}
+
+export interface SettingsView {
+  settings: SheruSettings;
+  pace: Pace;
+  quotes: QuoteFrequency;
+  voice: boolean;
+  sounds: boolean;
+  overrides: Record<string, "focus" | "neutral" | "distraction">;
+  effective: Timings;
+  presets: Record<Pace, Timings>;
+  voiceEngine: VoiceStatus;
+}
+
+export interface SettingsPatch {
+  settings?: SheruSettings;
+  pace?: Pace;
+  quotes?: QuoteFrequency;
+  voice?: boolean;
+  sounds?: boolean;
+  overrides?: Record<string, "focus" | "neutral" | "distraction">;
 }

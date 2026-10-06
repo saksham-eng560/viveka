@@ -1,4 +1,4 @@
-// Bridge to Sheru's brain (the Lighthouse backend coach on :8000).
+// Bridge to Sheru's brain (the backend coach on :8000).
 // When it answers, the backend owns judging and nudging (it also sees desktop apps);
 // when it does not, the extension falls back to its own standalone engine.
 

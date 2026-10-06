@@ -1,4 +1,4 @@
-# Sheru: the Lighthouse desk buddy, layered on the base model (no extra download).
+# Sheru: the desk buddy's persona, layered on the base model (no extra download).
 # Build: ollama create sheru -f ollama/Modelfile.sheru   (start.sh/setup.sh do this for you;
 # they swap the FROM line for $LLM_MODEL when you use a different base model)
 FROM qwen3.5:4b

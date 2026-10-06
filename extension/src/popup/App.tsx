@@ -170,7 +170,7 @@ export function App() {
         <img src="/sheru.svg" alt="Sheru the lion cub" width={52} height={60} className="shrink-0" />
         <div className="min-w-0">
           <h1 className="m-0 font-serif text-[19px] font-semibold leading-6 text-heading">
-            {profile ? `Namaste, ${profile.firstName}!` : "Lighthouse"}
+            {profile ? `Namaste, ${profile.firstName}!` : "Sheru"}
           </h1>
           <p className="m-0 text-xs text-muted" data-testid="brain-line">
             {loading
@@ -208,9 +208,10 @@ export function App() {
               <Button className="px-1 text-xs" onClick={() => void brainAction("hush", 30)}>Quiet 30m</Button>
             )}
           </div>
-          <div className="grid grid-cols-2 gap-2">
-            <Button variant="primary" onClick={() => openTab(DASHBOARD_URL)}>Dashboard</Button>
-            <Button onClick={() => openTab(`${DASHBOARD_URL}/?onboarding=1`)}>Edit goals</Button>
+          <div className="grid grid-cols-3 gap-1.5">
+            <Button variant="primary" className="px-1" onClick={() => openTab(DASHBOARD_URL)}>Dashboard</Button>
+            <Button className="px-1" onClick={() => openTab(`${DASHBOARD_URL}/?view=settings`)}>Settings</Button>
+            <Button className="px-1" onClick={() => openTab(`${DASHBOARD_URL}/?onboarding=1`)}>Edit goals</Button>
           </div>
         </>
       )}
@@ -227,7 +228,7 @@ export function App() {
       {offline && (
         <>
           <section className="rounded-[12px] border border-line bg-surface p-3 text-xs leading-[18px] text-ink" data-testid="brain-offline">
-            Start Lighthouse to wake Sheru up: open Terminal in the project folder and run <code className="font-semibold">./start.sh</code>.
+            Start Sheru's brain to wake him up: open Terminal in the project folder and run <code className="font-semibold">./start.sh</code>.
             Until then I can still guard this browser on my own:
           </section>
           <QuoteBlock quote={quoteFor("sessionStart")} size="sm" />

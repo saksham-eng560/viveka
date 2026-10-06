@@ -152,7 +152,7 @@ _APP_RULES: tuple[tuple[tuple[str, ...], Rule], ...] = (
     (("com.apple.finder", "finder", "com.apple.systempreferences", "system settings", "system preferences",
       "com.apple.activitymonitor", "activity monitor", "com.apple.dock", "dock", "loginwindow", "com.apple.loginwindow",
       "com.apple.screensaver.engine", "screensaver", "com.apple.spotlight", "spotlight", "com.apple.controlcenter",
-      "control center", "com.apple.notificationcenterui", "lighthouse buddy", "dev.lighthouse.buddy",
+      "control center", "com.apple.notificationcenterui", "lighthouse buddy", "dev.lighthouse.buddy", "sheru", "dev.sheru.app",
       "com.apple.systemuiserver", "1password", "com.1password.1password", "raycast", "com.raycast.macos",
       "alfred", "com.runningwithcrayons.alfred", "app store", "com.apple.appstore", "calendar", "com.apple.ical",
       "reminders", "com.apple.reminders", "clock", "calculator", "com.apple.calculator"),

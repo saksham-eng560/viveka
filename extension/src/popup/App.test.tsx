@@ -31,6 +31,8 @@ describe("Popup", () => {
     expect(screen.getByTestId("brain-status").textContent).toContain("50m");
     expect(screen.getByTestId("goals").textContent).toContain("Build my portfolio");
     expect(screen.getByText("Edit goals")).toBeTruthy();
+    screen.getByText("Settings").click();
+    expect(chrome.tabs.create).toHaveBeenCalledWith({ url: "http://localhost:3000/?view=settings" });
   });
 
   it("asks for goals when no profile exists yet", async () => {

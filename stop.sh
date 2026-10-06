@@ -3,7 +3,7 @@
 set -euo pipefail
 . "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/scripts/lib.sh"
 case "${1:-}" in
-  -h|--help) echo "Usage: ./stop.sh   Stops anything recorded in .run/*.pid (Lighthouse browser window, Sheru desktop buddy, dashboard, backend, aw-watcher-window, aw-watcher-afk, aw-server, ollama; watchers are stopped before the server), only if the pid still belongs to that service."; exit 0 ;;
+  -h|--help) echo "Usage: ./stop.sh   Stops anything recorded in .run/*.pid (Sheru browser window, Sheru desktop app, dashboard, backend, aw-watcher-window, aw-watcher-afk, aw-server, ollama; watchers are stopped before the server), only if the pid still belongs to that service."; exit 0 ;;
   "") ;;
   *) die "Unknown option: $1" ;;
 esac

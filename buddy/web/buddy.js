@@ -1,4 +1,4 @@
-/* Sheru, the Lighthouse desk buddy: presentation + interaction.
+/* Sheru, the desk buddy: presentation + interaction.
  * The brain lives in the backend (/api/buddy/*). Inside the macOS app this page is
  * loaded in a transparent always-on-top window; window.webkit.messageHandlers.buddy
  * is the bridge for native things (click-through regions, dragging, activating apps).
@@ -23,12 +23,16 @@
   const native = (msg) => {
     try { window.webkit.messageHandlers.buddy.postMessage(msg); } catch (_) { /* preview in a browser */ }
   };
+  // surface page errors in the app log (.run/logs/buddy.log) instead of failing silently
+  window.addEventListener("error", (e) => native({ type: "log", text: `error: ${e.message} @${e.lineno}:${e.colno}` }));
+  window.addEventListener("unhandledrejection", (e) => native({ type: "log", text: `unhandled: ${e.reason && (e.reason.stack || e.reason.message || e.reason)}` }));
 
   // ------------------------------------------------------------------ state
   const st = {
     lastId: 0, firstPoll: true, baseMood: "idle", profile: null, queue: [], current: null,
     hideTimer: null, typeTimer: null, moodTimer: null, chatting: false, menuOpen: false, offline: false,
-    activeAlertId: null, voice: false, sounds: true,
+    activeAlertId: null, voice: false, sounds: true, showChip: true,
+    voiceCfg: { voice: "af_heart", speed: 1, pitch: 6, volume: 0.9, speak: "important" },
   };
   let svg = null;
 
@@ -119,37 +123,95 @@
 
   // ----------------------------------------------------------------- sound
   let audio = null;
+  const audioCtx = () => {
+    audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+    if (audio.state === "suspended") audio.resume().catch(() => {});
+    return audio;
+  };
   function chime(kind) {
     if (!st.sounds) return;
     try {
-      audio = audio || new (window.AudioContext || window.webkitAudioContext)();
-      if (audio.state === "suspended") audio.resume().catch(() => {});
+      const ctx = audioCtx();
       const notes = kind === "alert" ? [659.3, 880] : kind === "happy" ? [784, 1046.5] : kind === "soft" ? [587.3] : [880];
       notes.forEach((f, i) => {
-        const o = audio.createOscillator(), g = audio.createGain();
+        const o = ctx.createOscillator(), g = ctx.createGain();
         o.type = "sine"; o.frequency.value = f;
-        const t = audio.currentTime + i * 0.13;
+        const t = ctx.currentTime + i * 0.13;
         g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.06, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.28);
-        o.connect(g).connect(audio.destination); o.start(t); o.stop(t + 0.3);
+        o.connect(g).connect(ctx.destination); o.start(t); o.stop(t + 0.3);
       });
     } catch (_) { /* no audio */ }
   }
-  function speak(text) {
-    if (!st.voice || !("speechSynthesis" in window)) return;
+
+  // ----------------------------------------------------------------- voice
+  // Sheru's natural voice comes from the backend (on-device neural TTS, pre-rendered when a message is
+  // created). Played a little faster than recorded for a cub-like pitch; the backend slows the speech
+  // down by the same factor so the tempo stays as chosen. Browser speech is only a last resort.
+  const IMPORTANT = new Set(["greeting", "nudge", "distraction", "stall", "break", "back", "info", "chat"]);
+  let speechToken = 0, currentSource = null, talkingTyping = false, talkingAudio = false;
+  const setTalking = () => ui.host.classList.toggle("talking", talkingTyping || talkingAudio);
+
+  async function fetchSpeech(text) {
+    const r = await fetch("/api/voice/say", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text }) });
+    if (!r.ok) throw new Error("voice " + r.status);
+    return audioCtx().decodeAudioData(await r.arrayBuffer());
+  }
+  function playBuffer(buf, token) {
+    return new Promise((resolve) => {
+      if (token !== speechToken) { resolve(); return; }
+      const ctx = audioCtx();
+      const src = ctx.createBufferSource(), gain = ctx.createGain();
+      src.buffer = buf;
+      src.playbackRate.value = 1 + (st.voiceCfg.pitch || 0) / 100;
+      gain.gain.value = st.voiceCfg.volume ?? 0.9;
+      src.connect(gain).connect(ctx.destination);
+      currentSource = src; talkingAudio = true; setTalking();
+      native({ type: "log", text: `voice: playing ${buf.duration.toFixed(1)}s (audio ${ctx.state})` });
+      src.onended = () => {
+        if (currentSource === src) { currentSource = null; talkingAudio = false; setTalking(); }
+        resolve();
+      };
+      src.start();
+    });
+  }
+  function stopSpeech() {
+    speechToken += 1;
+    if (currentSource) { try { currentSource.stop(); } catch (_) { /* already stopped */ } currentSource = null; }
+    talkingAudio = false; setTalking();
+    try { if ("speechSynthesis" in window) speechSynthesis.cancel(); } catch (_) { /* ignore */ }
+  }
+  function browserSpeak(text) {
+    if (!("speechSynthesis" in window)) return;
     try {
-      speechSynthesis.cancel();
-      const u = new SpeechSynthesisUtterance(text.replace(/[\u{1F300}-\u{1FAFF}☀-➿]/gu, ""));
+      const u = new SpeechSynthesisUtterance(text);
       const voices = speechSynthesis.getVoices();
-      u.voice = voices.find((v) => v.lang === "en-IN") || voices.find((v) => /Samantha|Karen|Moira/.test(v.name)) || null;
-      u.pitch = 1.35; u.rate = 1.03; u.volume = 0.9;
+      u.voice = voices.find((v) => /Samantha|Karen|Daniel/.test(v.name)) || voices.find((v) => v.lang && v.lang.startsWith("en")) || null;
+      u.pitch = 1 + (st.voiceCfg.pitch || 0) / 50; u.rate = st.voiceCfg.speed || 1; u.volume = st.voiceCfg.volume ?? 0.9;
       speechSynthesis.speak(u);
     } catch (_) { /* ignore */ }
+  }
+  async function speak(msg) {
+    stopSpeech();
+    const chunks = msg.speech || [];
+    if (!st.voice || !chunks.length) return;
+    if (st.voiceCfg.speak !== "everything" && !IMPORTANT.has(msg.kind)) return;
+    const token = speechToken;
+    let next = fetchSpeech(chunks[0]);
+    for (let i = 0; i < chunks.length; i += 1) {
+      let buf = null;
+      try { buf = await next; } catch (_) { buf = null; }
+      if (token !== speechToken) return;
+      if (i + 1 < chunks.length) next = fetchSpeech(chunks[i + 1]);  // fetch ahead while this one plays
+      if (!buf) { if (i === 0) browserSpeak(chunks.join(" ")); return; }
+      await playBuffer(buf, token);
+      if (token !== speechToken) return;
+    }
   }
 
   // ---------------------------------------------------------------- bubble
   function clearTimers() {
     clearTimeout(st.hideTimer); clearInterval(st.typeTimer); st.hideTimer = null; st.typeTimer = null;
-    ui.timer.className = ""; ui.host.classList.remove("talking");
+    ui.timer.className = ""; talkingTyping = false; setTalking();
   }
 
   function typeText(text, done) {
@@ -157,14 +219,14 @@
     let i = 0;
     ui.text.textContent = "";
     ui.text.classList.add("typing-caret");
-    ui.host.classList.add("talking");
+    talkingTyping = true; setTalking();
     const speed = chars.length > 140 ? 14 : 24;
     st.typeTimer = setInterval(() => {
       i = Math.min(chars.length, i + 2);
       ui.text.textContent = chars.slice(0, i).join("");
       if (i >= chars.length) {
         clearInterval(st.typeTimer); st.typeTimer = null;
-        ui.text.classList.remove("typing-caret"); ui.host.classList.remove("talking");
+        ui.text.classList.remove("typing-caret"); talkingTyping = false; setTalking();
         reportHitRects();
         done && done();
       }
@@ -198,19 +260,26 @@
     else if (mood === "celebrate") oneShot("jump", 1900);
     else if (mood === "happy" || mood === "wave") oneShot("hop", 650);
     if (msg.alert) chime("alert"); else if (msg.kind === "nudge") chime("soft"); else if (mood === "celebrate") chime("happy");
-    speak((msg.title ? msg.title + ". " : "") + msg.text);
+    void speak(msg);
     typeText(msg.text, () => {
       if (msg.ttl !== null && msg.ttl !== undefined && !msg.alert && !st.chatting) {
         const ms = Math.max(4000, msg.ttl * 1000);
         ui.timer.style.animationDuration = ms + "ms"; ui.timer.className = "run";
-        st.hideTimer = setTimeout(() => hide(), ms);
+        st.hideTimer = setTimeout(() => autoHide(), ms);
       }
     });
     reportHitRects();
   }
 
+  // timed hide: never cut Sheru off mid-sentence
+  function autoHide() {
+    if (talkingAudio) { st.hideTimer = setTimeout(() => autoHide(), 700); return; }
+    hide();
+  }
+
   function hide() {
     clearTimers();
+    stopSpeech();
     if (ui.bubble.hidden) return;
     ui.bubble.classList.add("leaving");
     setTimeout(() => {
@@ -226,7 +295,7 @@
   ui.bubble.addEventListener("mouseenter", () => { if (st.hideTimer) { clearTimeout(st.hideTimer); st.hideTimer = null; ui.timer.style.animationPlayState = "paused"; } });
   ui.bubble.addEventListener("mouseleave", () => {
     const m = st.current;
-    if (m && !st.typeTimer && !st.chatting && !st.menuOpen && m.ttl !== null && !m.alert) st.hideTimer = setTimeout(() => hide(), 3500);
+    if (m && !st.typeTimer && !st.chatting && !st.menuOpen && m.ttl !== null && !m.alert) st.hideTimer = setTimeout(() => autoHide(), 3500);
   });
   ui.close.addEventListener("click", (e) => {
     e.stopPropagation();
@@ -270,6 +339,8 @@
         native({ type: "open", url: DASHBOARD + "/?onboarding=1" });
         if (!NATIVE) window.open(DASHBOARD + "/?onboarding=1", "_blank");
         hide(); return;
+      case "settings":
+        native({ type: "open", url: DASHBOARD + "/?view=settings" }); if (!NATIVE) window.open(DASHBOARD + "/?view=settings", "_blank"); hide(); return;
       case "dashboard":
         native({ type: "open", url: DASHBOARD }); if (!NATIVE) window.open(DASHBOARD, "_blank"); hide(); return;
       case "chat":
@@ -296,6 +367,7 @@
       { id: "break", label: "5-min break", minutes: 5 },
       hushed ? { id: "resume", label: "Wake up" } : { id: "hush", label: "Quiet 30 min", minutes: 30 },
       { id: "dashboard", label: "Dashboard" },
+      { id: "settings", label: "Settings" },
     ] : [{ id: "open_onboarding", label: "Set my goals" }];
     show({ id: -Date.now(), kind: "menu", mood: "wave", title: "", text: lines[Math.floor(Math.random() * lines.length)], ttl: 12, actions });
     st.menuOpen = true;
@@ -324,7 +396,7 @@
     ui.text.classList.add("typing-caret");
     try {
       const res = await post("/api/buddy/chat", { text });
-      show({ id: -Date.now(), kind: "chat", mood: res.mood || "talk", title: "Sheru", text: res.reply, ttl: null, actions: [], keepChat: true });
+      show({ id: -Date.now(), kind: "chat", mood: res.mood || "talk", title: "Sheru", text: res.reply, ttl: null, actions: [], keepChat: true, speech: res.speech || [] });
     } catch (_) {
       show({ id: -Date.now(), kind: "chat", mood: "worried", title: "Sheru", text: "Hmm, my brain isn't answering. Try again in a moment?", ttl: null, actions: [], keepChat: true });
     }
@@ -374,10 +446,12 @@
       if (st.offline) { st.offline = false; if (st.current && st.current.kind === "offline") hide(); }
       st.profile = s.profile;
       st.voice = !!(s.profile && s.profile.voice);
+      st.voiceCfg = (s.profile && s.profile.voiceSettings) || st.voiceCfg;
+      st.showChip = !s.profile || s.profile.showStatusChip !== false;
       st.sounds = !s.profile || s.profile.sounds !== false;
       st.baseMood = s.mood;
       if (!st.current) setMood(st.baseMood === "idle" && s.now && s.now.verdict === "focus" ? "focus" : st.baseMood);
-      ui.chip.textContent = prettyVerdict(s.now);
+      ui.chip.textContent = st.showChip ? prettyVerdict(s.now) : "";
 
       let msgs = s.messages || [];
       if (st.firstPoll) {
@@ -397,7 +471,7 @@
     } catch (_) {
       if (!st.offline) {
         st.offline = true;
-        show({ id: -1, kind: "offline", mood: "sleep", title: "Snoozing…", text: "I can't see my brain (the Lighthouse backend). Start it with ./start.sh and I'll wake up!", ttl: null, actions: [] });
+        show({ id: -1, kind: "offline", mood: "sleep", title: "Snoozing…", text: "I can't see my brain (the backend). Start it with ./start.sh and I'll wake up!", ttl: null, actions: [] });
       }
     } finally {
       setTimeout(poll, POLL_MS);

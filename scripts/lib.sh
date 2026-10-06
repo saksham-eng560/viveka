@@ -10,9 +10,10 @@ DASH_DIR="$ROOT_DIR/dashboard"
 BACKEND_DIR="$ROOT_DIR/pulse-backend"
 VENV_DIR="$BACKEND_DIR/.venv"
 BUDDY_DIR="$ROOT_DIR/buddy"
-BUDDY_APP="$BUDDY_DIR/build/Lighthouse Buddy.app"
-BUDDY_BIN="$BUDDY_APP/Contents/MacOS/LighthouseBuddy"
+BUDDY_APP="$BUDDY_DIR/build/Sheru.app"
+BUDDY_BIN="$BUDDY_APP/Contents/MacOS/Sheru"
 SHERU_MODEL="sheru"
+MODELS_DIR="$ROOT_DIR/.models"
 
 EXTENSION_ID="edaacbpplacmlbfilkabahkcmhopmpdj"
 DEFAULT_MODEL="qwen3.5:4b"
@@ -259,7 +260,7 @@ pid_is_ours() {
     ollama)    case "$cmd" in *ollama*) ;; *) return 1 ;; esac ;;
     aw-server) case "$cmd" in *aw-watcher*) return 1 ;; esac
                case "$cmd" in */aw-server-rust/aw-server-rust*|*/aw-server/aw-server*|aw-server-rust*|aw-server*|*/aw-server-rust*|*/aw-server|*/aw-server\ *) ;; *) return 1 ;; esac ;;
-    buddy)     case "$cmd" in *LighthouseBuddy*) ;; *) return 1 ;; esac ;;
+    buddy)     case "$cmd" in */Contents/MacOS/Sheru*|*LighthouseBuddy*) ;; *) return 1 ;; esac ;;  # LighthouseBuddy: pre-rename app
     browser)   case "$cmd" in *launch-browser.mjs*) ;; *) return 1 ;; esac ;;
     aw-watcher-window) case "$cmd" in *aw-watcher-window*) ;; *) return 1 ;; esac ;;
     aw-watcher-afk)    case "$cmd" in *aw-watcher-afk*) ;; *) return 1 ;; esac ;;
@@ -271,7 +272,7 @@ pid_is_ours() {
     if [ "$cur" != "$want" ]; then
       # Possibly a pid file written before UTC start times were used (or a reused pid).
       # Never signal it; tell the user so a genuine service is not silently orphaned.
-      warn "pid $pid ($name) looks like our process but its start time differs from .run/$name.pid; not treating it as ours. If it is a leftover Lighthouse service, stop it manually: kill $pid"
+      warn "pid $pid ($name) looks like our process but its start time differs from .run/$name.pid; not treating it as ours. If it is a leftover Sheru service, stop it manually: kill $pid"
       return 1
     fi
   fi
@@ -414,4 +415,48 @@ ensure_sheru_model() {
     return 0
   fi
   return 1
+}
+
+# ---- Sheru's natural voice (Kokoro, on-device) -------------------------------------
+VOICE_BASE_URL="https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0"
+# file:sha256 (downloads are verified before they are used)
+VOICE_FILES="kokoro-v1.0.fp16.onnx:c1610a859f3bdea01107e73e50100685af38fff88f5cd8e5c56df109ec880204
+voices-v1.0.bin:bca610b8308e8d99f32e6fe4197e7ec01679264efed0cac9140fe9c29f1fbf7d"
+
+sha256_of() {
+  if have shasum; then shasum -a 256 "$1" | cut -d' ' -f1; else sha256sum "$1" | cut -d' ' -f1; fi
+}
+
+# voice_installed: the engine is importable and both model files are present
+voice_installed() {
+  local entry
+  [ -x "$VENV_DIR/bin/python" ] || return 1
+  for entry in $VOICE_FILES; do [ -s "$MODELS_DIR/${entry%%:*}" ] || return 1; done
+  "$VENV_DIR/bin/python" -c "import kokoro_onnx" >/dev/null 2>&1
+}
+
+# install_voice: kokoro-onnx into the backend venv + verified model files into .models/ (~205 MB, once)
+install_voice() {
+  local entry f want got
+  [ -x "$VENV_DIR/bin/python" ] || { warn "Backend venv missing; run ./setup.sh first"; return 1; }
+  if ! "$VENV_DIR/bin/python" -c "import kokoro_onnx" >/dev/null 2>&1; then
+    info "Installing Sheru's voice engine (kokoro-onnx)"
+    if UVBIN="$(find_uv)"; then "$UVBIN" pip install -q -r "$BACKEND_DIR/requirements-voice.txt" --python "$VENV_DIR/bin/python" || return 1
+    else "$VENV_DIR/bin/python" -m pip install -q -r "$BACKEND_DIR/requirements-voice.txt" || return 1; fi
+  fi
+  mkdir -p "$MODELS_DIR"
+  for entry in $VOICE_FILES; do
+    f="${entry%%:*}"; want="${entry##*:}"
+    [ -s "$MODELS_DIR/$f" ] && continue
+    info "Downloading $f (one time)"
+    curl -fL --retry 3 -C - -o "$MODELS_DIR/$f.part" "$VOICE_BASE_URL/$f" || { warn "Download of $f failed"; return 1; }
+    got="$(sha256_of "$MODELS_DIR/$f.part")"
+    if [ "$got" != "$want" ]; then
+      rm -f "$MODELS_DIR/$f.part"
+      warn "Checksum mismatch for $f (got $got); deleted. Try again later."
+      return 1
+    fi
+    mv "$MODELS_DIR/$f.part" "$MODELS_DIR/$f"
+  done
+  ok "Sheru's natural voice is installed"
 }

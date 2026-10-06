@@ -3,13 +3,14 @@
 set -euo pipefail
 . "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/scripts/lib.sh"
 
-DEV=0; SKIP_MODEL=0; WITH_ENV=0
+DEV=0; SKIP_MODEL=0; WITH_ENV=0; SKIP_VOICE=0
 usage() {
   cat <<USAGE
 Usage: ./setup.sh [--dev] [--skip-model] [--with-env] [-h|--help]
 
   --dev          also install pulse-backend/requirements-dev.txt (pytest etc.)
   --skip-model   do not check/pull the Ollama model
+  --skip-voice   do not install Sheru's natural voice (~205 MB download)
   --with-env     copy .env.example -> .env files (defaults already work without them)
   -h, --help     show this help
 
@@ -21,7 +22,7 @@ USAGE
 }
 for a in "$@"; do
   case "$a" in
-    --dev) DEV=1 ;; --skip-model) SKIP_MODEL=1 ;; --with-env) WITH_ENV=1 ;;
+    --dev) DEV=1 ;; --skip-model) SKIP_MODEL=1 ;; --skip-voice) SKIP_VOICE=1 ;; --with-env) WITH_ENV=1 ;;
     -h|--help) usage; exit 0 ;;
     *) usage >&2; die "Unknown option: $a" ;;
   esac
@@ -156,14 +157,28 @@ fi
 ok "Extension built: $EXT_DIR/dist (model: $EXT_MODEL)"
 add "Extension build: extension/dist (model: $EXT_MODEL)"
 
+# ---- Sheru's natural voice ----------------------------------------------------------
+if [ "$SKIP_VOICE" -eq 1 ]; then
+  info "Skipping the natural voice (--skip-voice); Sheru will use the macOS voice"
+  add "Voice: skipped (macOS voice is used)"
+elif voice_installed; then
+  ok "Sheru's natural voice already installed"
+  add "Voice: natural (Kokoro, on-device)"
+elif install_voice; then
+  add "Voice: natural (Kokoro, on-device)"
+else
+  warn "Could not install the natural voice; Sheru will use the macOS voice (retry: scripts/install-voice.sh)"
+  add "Voice: NOT installed (macOS voice is used)"
+fi
+
 # ---- Sheru desktop buddy (macOS) ------------------------------------------------
 if [ "$(uname -s)" = "Darwin" ]; then
   if have swiftc; then
-    info "Building Sheru's desktop app (Lighthouse Buddy.app)"
+    info "Building Sheru's desktop app (Sheru.app)"
     if "$BUDDY_DIR/build.sh"; then
-      add "Desktop buddy: buddy/build/Lighthouse Buddy.app"
+      add "Desktop buddy: buddy/build/Sheru.app"
     else
-      warn "Could not build the desktop buddy; Lighthouse still works in the browser."
+      warn "Could not build the desktop buddy; Sheru still works in the browser."
       add "Desktop buddy: build FAILED (see output above)"
     fi
   else

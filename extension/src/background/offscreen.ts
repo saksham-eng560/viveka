@@ -12,7 +12,7 @@ export async function ensureOffscreen(): Promise<boolean> {
     await chrome.offscreen.createDocument({
       url: OFFSCREEN_PATH,
       reasons: [chrome.offscreen.Reason.WORKERS],
-      justification: "Keeps the Lighthouse service worker alive so tab tracking and nudges stay continuous.",
+      justification: "Keeps Sheru's service worker alive so tab tracking and nudges stay continuous.",
     });
     return true;
   } catch {

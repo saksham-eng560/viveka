@@ -30,7 +30,7 @@ def env(monkeypatch: pytest.MonkeyPatch, tmp_path: Any) -> Iterator[Callable[...
 
     for k, v in ENV_DEFAULTS.items():
         monkeypatch.setenv(k, v)
-    monkeypatch.setenv("LIGHTHOUSE_DATA_DIR", str(tmp_path / "data"))
+    monkeypatch.setenv("SHERU_DATA_DIR", str(tmp_path / "data"))
     monkeypatch.setenv("LLM_CLASSIFY", "off")
     config.get_settings.cache_clear()
     coach.reset_coach()

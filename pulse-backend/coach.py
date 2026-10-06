@@ -18,6 +18,7 @@ All timings come from the user's chosen pace (gentle / balanced / demo).
 from __future__ import annotations
 
 import asyncio
+import dataclasses
 import datetime as dt
 import hashlib
 import logging
@@ -31,8 +32,9 @@ from activity_store import ActivityStore, Segment
 from catalog import Activity, Verdict, domain_of, domain_from_browser_title, heuristic_verdict, is_browser, is_system
 from config import Settings
 from persona import Brain, fmt_minutes, template
-from profile_store import Profile, ProfileStore
+from profile_store import Profile, ProfileStore, SheruSettings
 from vivekananda import Wisdom, WisdomPicker
+from voice import IMPORTANT_KINDS, Voice, effective_speed, speech_chunks, speech_text
 
 logger = logging.getLogger("pulse.coach")
 
@@ -100,6 +102,7 @@ class Message:
     level: int = 0
     label: str = ""
     ts: float = 0.0
+    speech: list[str] = field(default_factory=list)  # what Sheru says out loud, in sentence chunks
 
     def public(self) -> dict[str, Any]:
         d = asdict(self)
@@ -138,6 +141,7 @@ class Coach:
         self._tasks: set[asyncio.Task[Any]] = set()
         self._llm_sem: Optional[asyncio.Semaphore] = None
         self._today_cache: tuple[float, dict[str, Any]] = (0.0, {})
+        self.voice: Optional[Voice] = None  # set by the app; pre-renders spoken lines
         self.reset_session()
 
     # ------------------------------------------------------------------ state
@@ -181,9 +185,21 @@ class Coach:
         return self.profiles.load()
 
     @property
-    def pace(self) -> Pace:
+    def prefs(self) -> SheruSettings:
         p = self.profile
-        return PACES.get(p.pace if p else "balanced", PACES["balanced"])
+        return p.settings if p is not None else SheruSettings()
+
+    @property
+    def pace(self) -> Pace:
+        """The pace preset, with any timing the user fine-tuned in Settings applied on top."""
+        p = self.profile
+        base = PACES.get(p.pace if p else "balanced", PACES["balanced"])
+        overrides = {k: v for k, v in self.prefs.timings.model_dump().items() if v is not None}
+        return dataclasses.replace(base, **overrides) if overrides else base
+
+    @property
+    def ai_enabled(self) -> bool:
+        return self.settings.llm_classify and self.prefs.use_ai
 
     def buddy_online(self, now: Optional[float] = None) -> bool:
         return self.desktop is not None and (now or self.clock()) - self.desktop_at <= DESKTOP_FRESH * 2
@@ -280,7 +296,7 @@ class Coach:
 
     # ------------------------------------------------------------ LLM plumbing
     def _spawn(self, coro: Any) -> bool:
-        if not self.settings.llm_classify:
+        if not self.ai_enabled:
             coro.close()
             return False
         try:
@@ -323,7 +339,7 @@ class Coach:
 
         async def run() -> None:
             line = await self.brain.line(kind, name=p.first_name, age=p.age, goal=p.main_goal, label=label,
-                                         minutes=minutes, title=title, place=place)
+                                         minutes=minutes, title=title, place=place, personality=p.settings.personality)
             if line:
                 self._lines[slot] = line
                 if len(self._lines) > 40:
@@ -335,6 +351,8 @@ class Coach:
     def _push(self, kind: str, mood: str, text: str, **kw: Any) -> Message:
         now = self.clock()
         msg = Message(id=self._next_id, kind=kind, mood=mood, text=text, ts=now, **kw)
+        msg.speech = speech_chunks(speech_text(kind, msg.title, text))
+        self._prefetch_speech(msg.kind, msg.speech)
         self._next_id += 1
         self.messages.append(msg)
         self.last_message_at = now
@@ -346,6 +364,21 @@ class Coach:
             except Exception:  # pragma: no cover - logging must never break the coach
                 logger.exception("could not log alert")
         return msg
+
+    def voice_params(self) -> tuple[str, float]:
+        v = self.prefs.voice
+        return v.voice, effective_speed(v.speed, v.pitch)
+
+    def _prefetch_speech(self, kind: str, chunks: list[str]) -> None:
+        p = self.profile
+        if self.voice is None or p is None or not p.voice or not chunks:
+            return
+        if p.settings.voice.speak != "everything" and kind not in IMPORTANT_KINDS:
+            return
+        try:
+            self.voice.prefetch(chunks, *self.voice_params())
+        except Exception:  # pragma: no cover - speech must never break the coach
+            logger.exception("could not pre-render speech")
 
     def _find(self, msg_id: Optional[int]) -> Optional[Message]:
         return next((m for m in self.messages if m.id == msg_id), None)
@@ -370,6 +403,21 @@ class Coach:
             self._push("quote", "wisdom", w.text, title="To start the day", source=w.source, ttl=20)
         self.greeted = True
         self.last_wisdom = self.clock()
+
+    def settings_changed(self) -> None:
+        """Settings, the allowed list or history changed: recompute what depends on them."""
+        self._llm_cache.clear()
+        self._today_cache = (0.0, {})
+        self.warm_voice()
+
+    def warm_voice(self) -> None:
+        """Load the voice model in the background when speaking is on, so the first line isn't late."""
+        p = self.profile
+        if self.voice is not None and p is not None and p.voice:
+            try:
+                self.voice.prefetch(["Hi!"], *self.voice_params())
+            except Exception:  # pragma: no cover
+                logger.exception("voice warm-up failed")
 
     def on_profile_saved(self) -> None:
         self._llm_cache.clear()
@@ -398,7 +446,7 @@ class Coach:
             return
         if self.away:
             self.away = False
-            if self.away_since and now - self.away_since >= pace.afk:
+            if self.away_since and now - self.away_since >= pace.afk and self.prefs.detectors.welcome_back:
                 self._push("info", "wave", template("away_back", self.rng, **self._fields()), ttl=12)
             self.away_since = None
             self.dist_since, self.stall_level = None, 0
@@ -511,7 +559,7 @@ class Coach:
             level = 1
         elif self.dist_level >= 1 and now - self.dist_last_alert >= pace.repeat:
             level = 2
-        if not level:
+        if not level or not self.prefs.detectors.detour:
             return
         slot = f"d{self.dist_episode}-{min(self.dist_level + 1, 2)}"
         line = self._lines.pop(slot, None) or template(f"distraction{level}", self.rng,
@@ -535,10 +583,12 @@ class Coach:
 
     def _heads_up(self, act: Activity, verdict: Verdict, now: float, pace: Pace, spent: float) -> None:
         """A soft "wrong tab?" note shortly after landing on something off-goal, well before any real alert."""
+        if not self.prefs.detectors.headsup:
+            return
         if self.dist_level > 0 or self.headsup_episode == self.dist_episode or spent < pace.headsup:
             return
         # an ambiguous site (e.g. YouTube) may still be judged "on goal" by the model: give it a few seconds
-        settled = not verdict.ambiguous or verdict.source == "llm" or not self.settings.llm_classify or spent >= 6
+        settled = not verdict.ambiguous or verdict.source == "llm" or not self.ai_enabled or spent >= 6
         if not settled:
             return
         self.headsup_episode = self.dist_episode
@@ -563,6 +613,8 @@ class Coach:
             return
         if quiet or now < self.snooze_until or not verdict.writing or verdict.kind == "distraction":
             return
+        if not self.prefs.detectors.stall:
+            return
         if key_idle > 20 * 60 or self.stall_level >= 3:
             return  # not writing at all lately, or already said our piece
         in_ctx = now - self.ctx_since
@@ -578,7 +630,8 @@ class Coach:
             w = self.wisdom.quote("stuck")
             self._push("stall", "think", template("stall1", self.rng, **fields), title="Thinking pause?",
                        level=1, label=act.label, ttl=22, actions=[ACT_OK])
-            self._push("quote", "wisdom", w.text, title="A little fuel", source=w.source, ttl=20)
+            if self.profile is not None and self.profile.quotes != "off":
+                self._push("quote", "wisdom", w.text, title="A little fuel", source=w.source, ttl=20)
         elif want == 2:
             self._push("stall", "think", template("stall2", self.rng, **fields), title="Still stuck?",
                        level=2, label=act.label, ttl=25, actions=[ACT_OK, ACT_BREAK])
@@ -589,6 +642,8 @@ class Coach:
                        actions=[{"id": "dismiss", "label": "I'm back"}, ACT_BREAK, ACT_SNOOZE])
 
     def _storm(self, now: float) -> None:
+        if not self.prefs.detectors.hopping:
+            return
         pace = self.pace
         while self.switches and now - self.switches[0] > pace.storm_window:
             self.switches.popleft()
@@ -601,7 +656,7 @@ class Coach:
                        ttl=14)
 
     def _streak(self, verdict: Verdict, now: float, pace: Pace) -> None:
-        if verdict.kind != "focus" or self.focus_since is None:
+        if verdict.kind != "focus" or self.focus_since is None or not self.prefs.detectors.streak:
             return
         if now - self.focus_since >= pace.streak and now - self.last_streak >= pace.streak:
             self.last_streak = now
@@ -611,6 +666,8 @@ class Coach:
 
     def _ambient(self, verdict: Verdict, d: Optional[DesktopSample], now: float, pace: Pace) -> None:
         p = self.profile
+        if p is not None and p.quotes == "off":
+            return
         gap = pace.wisdom_gap * WISDOM_MULT.get(p.quotes if p else "sometimes", 1.0)
         if now - self.last_wisdom < gap or now - self.last_message_at < 30 or self.active_alert is not None:
             return
@@ -697,18 +754,25 @@ class Coach:
         elif lower in ("fact", "a fact", "tell me a fact"):
             reply = self.wisdom.fact().text
         else:
-            reply = await self.brain.chat(text, self.chat_history, ctx)
+            reply = (await self.brain.chat(text, self.chat_history, ctx, personality=self.prefs.personality)
+                     if self.prefs.use_ai else "My thinking cap is switched off in Settings, but I'm still cheering for you! "
+                     "Click me for a Swamiji quote.")
         self.chat_history += [{"role": "user", "text": text}, {"role": "sheru", "text": reply}]
         self.chat_history = self.chat_history[-12:]
-        return {"reply": reply, "mood": "talk"}
+        speech = speech_chunks(speech_text("chat", "", reply))
+        self._prefetch_speech("chat", speech)
+        return {"reply": reply, "mood": "talk", "speech": speech}
 
     # ------------------------------------------------------------------ views
     def _profile_brief(self) -> Optional[dict[str, Any]]:
         p = self.profile
         if p is None:
             return None
+        v = p.settings.voice
         return {"name": p.name, "firstName": p.first_name, "goals": p.goals, "pace": p.pace, "voice": p.voice,
-                "sounds": p.sounds, "quotes": p.quotes}
+                "sounds": p.sounds, "quotes": p.quotes, "showStatusChip": p.settings.show_status_chip,
+                "voiceSettings": {"voice": v.voice, "speed": v.speed, "pitch": v.pitch, "volume": v.volume,
+                                  "speak": v.speak}}
 
     def mood(self, now: float) -> str:
         if self.profile is None:

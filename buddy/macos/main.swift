@@ -1,11 +1,11 @@
-// Lighthouse Buddy: Sheru on your desktop.
+// Sheru: the lion-cub focus buddy on your desktop.
 //
 // A transparent, always-on-top panel (top-left of the screen) that hosts the Sheru web UI
-// served by the Lighthouse backend, plus the desktop sensors the coach needs:
+// served by Sheru's backend, plus the desktop sensors the coach needs:
 //   * frontmost app + window title (window title needs Accessibility permission)
 //   * seconds since the last key press / any input (system counters; no key logging)
 //   * screen lock state
-// Build: buddy/build.sh   Run: "buddy/build/Lighthouse Buddy.app/Contents/MacOS/LighthouseBuddy" --port 8000
+// Build: buddy/build.sh   Run: buddy/build/Sheru.app/Contents/MacOS/Sheru --port 8000
 
 import AppKit
 import ApplicationServices
@@ -105,7 +105,7 @@ final class BuddyApp: NSObject, NSApplicationDelegate, WKScriptMessageHandler, W
         c.timeoutIntervalForRequest = 2.5
         return URLSession(configuration: c)
     }()
-    let ownBundle = Bundle.main.bundleIdentifier ?? "dev.lighthouse.buddy"
+    let ownBundle = Bundle.main.bundleIdentifier ?? "dev.sheru.app"
 
     func applicationDidFinishLaunching(_ note: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -208,7 +208,7 @@ final class BuddyApp: NSObject, NSApplicationDelegate, WKScriptMessageHandler, W
     func buildStatusItem() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         statusItem.button?.title = "🦁"
-        statusItem.button?.toolTip = "Sheru — Lighthouse buddy"
+        statusItem.button?.toolTip = "Sheru, your focus buddy"
         let menu = NSMenu()
         menu.addItem(withTitle: "Show / Hide Sheru", action: #selector(toggleVisible), keyEquivalent: "s").target = self
         menu.addItem(withTitle: "Swamiji quote", action: #selector(menuQuote), keyEquivalent: "").target = self
@@ -217,6 +217,7 @@ final class BuddyApp: NSObject, NSApplicationDelegate, WKScriptMessageHandler, W
         menu.addItem(.separator())
         menu.addItem(withTitle: "Open dashboard", action: #selector(openDashboard), keyEquivalent: "d").target = self
         menu.addItem(withTitle: "Edit my goals", action: #selector(openOnboarding), keyEquivalent: "").target = self
+        menu.addItem(withTitle: "Settings…", action: #selector(openSettings), keyEquivalent: ",").target = self
         menu.addItem(withTitle: "Reset position (top-left)", action: #selector(resetPosition), keyEquivalent: "").target = self
         menu.addItem(withTitle: "Allow window titles (Accessibility)…", action: #selector(openAccessibility),
                      keyEquivalent: "").target = self
@@ -232,6 +233,7 @@ final class BuddyApp: NSObject, NSApplicationDelegate, WKScriptMessageHandler, W
     @objc func menuBreak() { postAction("break", minutes: 5) }
     @objc func openDashboard() { open(config.dashboard) }
     @objc func openOnboarding() { open(config.dashboard + "/?onboarding=1") }
+    @objc func openSettings() { open(config.dashboard + "/?view=settings") }
     @objc func reloadPage() { load() }
     @objc func quit() { NSApp.terminate(nil) }
     @objc func resetPosition() {
@@ -324,6 +326,10 @@ final class BuddyApp: NSObject, NSApplicationDelegate, WKScriptMessageHandler, W
             panel.makeKeyAndOrderFront(nil)
         case "blur":
             if panel.isKeyWindow { panel.resignKey() }
+        case "log":  // page diagnostics (audio state etc.) end up in .run/logs/buddy.log
+            if let text = body["text"] as? String {
+                FileHandle.standardError.write(("[sheru page] " + text + "\n").data(using: .utf8)!)
+            }
         default:
             break
         }
@@ -339,7 +345,7 @@ final class BuddyApp: NSObject, NSApplicationDelegate, WKScriptMessageHandler, W
         if let pid = front?.processIdentifier, bundle != ownBundle {
             title = Sensors.windowTitle(pid: pid)
         }
-        if bundle == ownBundle { app = "Lighthouse Buddy"; bundle = ownBundle; title = "" }
+        if bundle == ownBundle { app = "Sheru"; bundle = ownBundle; title = "" }
         let body: [String: Any] = [
             "app": app, "bundleId": bundle, "title": String(title.prefix(400)),
             "keyIdle": Sensors.keyIdle(), "inputIdle": Sensors.inputIdle(),

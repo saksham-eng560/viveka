@@ -1,4 +1,4 @@
-# Ollama + Lighthouse backend (Sheru's brain). aw-server (ActivityWatch) runs on the host, not in a container.
+# Ollama + Sheru's backend (his brain). aw-server (ActivityWatch) runs on the host, not in a container.
 # Sheru's desktop app and the browser extension run on the host and talk to http://localhost:8000.
 # The "sheru" persona model is not created here; the backend falls back to LLM_MODEL with the same persona prompt.
 # aw-server must listen on an address reachable from the container (not 127.0.0.1 only),
@@ -27,10 +27,10 @@ services:
       - AW_BUCKET_PREFIX=${AW_BUCKET_PREFIX:-aw-watcher-web-lighthouse}
       - DATA_SOURCE=${DATA_SOURCE:-auto}
       - STANDUP_FALLBACK=${STANDUP_FALLBACK:-template}
-      - LIGHTHOUSE_DATA_DIR=/data
+      - SHERU_DATA_DIR=/data
       - LLM_CLASSIFY=${LLM_CLASSIFY:-on}
     volumes:
-      - lighthouse_data:/data            # profile.json + lighthouse.db survive container restarts
+      - sheru_data:/data                 # profile.json + sheru.db survive container restarts
       - ./buddy/web:/buddy/web:ro        # Sheru's UI, served at /buddy
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -40,4 +40,4 @@ services:
 
 volumes:
   ollama_data:
-  lighthouse_data:
+  sheru_data:

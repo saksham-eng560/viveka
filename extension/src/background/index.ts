@@ -23,7 +23,7 @@ async function doBoot(): Promise<void> {
 function boot(): Promise<void> {
   booting ??= doBoot().catch((e: unknown) => {
     booting = null; // allow a retry on the next event
-    console.warn("Lighthouse boot failed", e);
+    console.warn("Sheru boot failed", e);
   });
   return booting;
 }

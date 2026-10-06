@@ -15,7 +15,9 @@ from catalog import VerdictKind
 from models import CamelModel
 
 Pace = Literal["gentle", "balanced", "demo"]
-QuoteFrequency = Literal["often", "sometimes", "rarely"]
+QuoteFrequency = Literal["often", "sometimes", "rarely", "off"]
+Personality = Literal["gentle", "playful", "coach"]
+SpeakScope = Literal["important", "everything"]
 
 _CONTROL = re.compile(r"[\x00-\x1f\x7f]+")
 
@@ -31,6 +33,44 @@ def _clean_list(items: list[str], limit: int, each: int) -> list[str]:
         if c and c.lower() not in (o.lower() for o in out):
             out.append(c)
     return out[:limit]
+
+
+class Timings(CamelModel):
+    """Optional per-user overrides (seconds) on top of the chosen pace preset."""
+
+    headsup: Optional[float] = Field(default=None, ge=1, le=600)
+    distraction: Optional[float] = Field(default=None, ge=3, le=3600)
+    repeat: Optional[float] = Field(default=None, ge=10, le=7200)
+    stall: Optional[float] = Field(default=None, ge=5, le=3600)
+    afk: Optional[float] = Field(default=None, ge=30, le=7200)
+    snooze: Optional[float] = Field(default=None, ge=5, le=3600)
+    break_len: Optional[float] = Field(default=None, ge=30, le=3600)
+
+
+class Detectors(CamelModel):
+    headsup: bool = True  # gentle "wrong tab?" note
+    detour: bool = True  # stronger alerts when staying off-goal
+    stall: bool = True  # writing-stall nudges
+    hopping: bool = True  # many app/tab switches
+    streak: bool = True  # focus-streak celebrations
+    welcome_back: bool = True  # greeting after being away
+
+
+class VoiceSettings(CamelModel):
+    voice: str = Field(default="af_heart", max_length=40)  # Kokoro voice id, or "system"
+    speed: float = Field(default=1.0, ge=0.7, le=1.4)
+    pitch: float = Field(default=6.0, ge=-10, le=25)  # percent; a little higher sounds like a cub
+    volume: float = Field(default=0.9, ge=0.0, le=1.0)
+    speak: SpeakScope = "important"
+
+
+class SheruSettings(CamelModel):
+    timings: Timings = Field(default_factory=Timings)
+    detectors: Detectors = Field(default_factory=Detectors)
+    voice: VoiceSettings = Field(default_factory=VoiceSettings)
+    personality: Personality = "playful"
+    use_ai: bool = True
+    show_status_chip: bool = True
 
 
 class ProfileIn(CamelModel):
@@ -68,6 +108,7 @@ class ProfileIn(CamelModel):
 
 class Profile(ProfileIn):
     overrides: dict[str, VerdictKind] = Field(default_factory=dict)
+    settings: SheruSettings = Field(default_factory=SheruSettings)
     created_at: str = ""
     updated_at: str = ""
 
@@ -115,6 +156,7 @@ class ProfileStore:
         profile = Profile(
             **incoming.model_dump(),
             overrides=prev.overrides if prev else {},
+            settings=prev.settings if prev else SheruSettings(),
             created_at=prev.created_at if prev and prev.created_at else now,
             updated_at=now,
         )

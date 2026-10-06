@@ -11,6 +11,12 @@ function walk(dir: string): string[] {
 }
 
 describe("manifest", () => {
+  it("is called Sheru", () => {
+    expect(manifest.name).toBe("Sheru");
+    expect(manifest.action.default_title).toBe("Sheru");
+    expect(manifest.description).toMatch(/Sheru/);
+  });
+
   it("declares MV3 with the required permissions", () => {
     expect(manifest.manifest_version).toBe(3);
     expect(manifest.permissions).toEqual(

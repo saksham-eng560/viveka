@@ -84,7 +84,7 @@ export async function send<K extends keyof ReplyMap>(
   message: Extract<BackgroundMessage, { type: K }>,
 ): Promise<ReplyMap[K]> {
   const reply = (await chrome.runtime.sendMessage(message)) as Reply<ReplyMap[K]> | undefined;
-  if (!reply) throw new Error("No response from Lighthouse background");
+  if (!reply) throw new Error("No response from Sheru's background");
   if (!reply.ok) throw new Error(reply.error);
   return reply.data;
 }

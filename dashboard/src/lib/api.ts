@@ -5,6 +5,8 @@ import type {
   DailySummaryResponse,
   ProfileInput,
   ProfileResponse,
+  SettingsPatch,
+  SettingsView,
   TodayResponse,
   HealthResponse,
   StandupNotesResponse,
@@ -68,6 +70,30 @@ export async function getToday(): Promise<TodayResponse> {
 
 export async function buddyAction(action: string, minutes?: number): Promise<void> {
   await client.post("/api/buddy/action", { action, minutes: minutes ?? null }, { timeout: 8000 });
+}
+
+export async function getSettings(): Promise<SettingsView> {
+  const { data } = await client.get<SettingsView>("/api/settings", { timeout: 8000 });
+  return data;
+}
+
+export async function saveSettings(patch: SettingsPatch): Promise<SettingsView> {
+  const { data } = await client.put<SettingsView>("/api/settings", patch, { timeout: 8000 });
+  return data;
+}
+
+export async function clearHistory(): Promise<void> {
+  await client.delete("/api/history", { timeout: 8000 });
+}
+
+export async function resetProfile(): Promise<void> {
+  await client.delete("/api/profile", { timeout: 8000 });
+}
+
+/** One spoken line as WAV (preview uses unsaved voice settings). */
+export async function voicePreview(text: string, voice: string, speed: number, pitch: number): Promise<Blob> {
+  const { data } = await client.post<Blob>("/api/voice/say", { text, voice, speed, pitch }, { responseType: "blob", timeout: 60_000 });
+  return data;
 }
 
 /** Backend `detail` if present, otherwise a connectivity message. */

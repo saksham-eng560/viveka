@@ -1,22 +1,23 @@
 #!/usr/bin/env bash
-# Start everything for Lighthouse: Ollama (+ the "sheru" persona model), ActivityWatch (if installed),
-# the backend (Sheru's brain), the dashboard, Sheru on your desktop (macOS) and a browser window
-# with the Lighthouse extension already installed.
+# Start everything for Sheru: Ollama (+ the "sheru" persona model), ActivityWatch (if installed),
+# the backend (Sheru's brain), the dashboard, Sheru on your desktop (macOS), his natural voice and a
+# browser window with the Sheru extension already installed.
 set -euo pipefail
 . "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/scripts/lib.sh"
 
 DETACH=0; OPEN=1; FIX_OLLAMA=0; YES=0; AW_WATCHERS=auto   # auto | yes | no
-BUDDY=1; BROWSER=1; FRESH=0
+BUDDY=1; BROWSER=1; FRESH=0; VOICE=1
 usage() {
   cat <<USAGE
-Usage: ./start.sh [--detach|-d] [--no-open] [--no-buddy] [--no-browser] [--fresh]
+Usage: ./start.sh [--detach|-d] [--no-open] [--no-buddy] [--no-browser] [--no-voice] [--fresh]
                    [--fix-ollama [-y|--yes]] [--aw-watchers|--no-aw-watchers] [-h|--help]
 
   -d, --detach    start services and return; stop later with ./stop.sh
   --no-open       do not open any browser window
   --no-buddy      do not start Sheru on the desktop (macOS)
-  --no-browser    do not open the Lighthouse browser window with the extension installed
+  --no-browser    do not open the Sheru browser window with the extension installed
                   (the dashboard opens in your default browser instead)
+  --no-voice      do not install Sheru's natural voice if it is missing (~205 MB, once)
   --fresh         forget the saved profile so onboarding starts again (activity history is kept)
   --fix-ollama    (macOS) set OLLAMA_ORIGINS persistently (launchctl setenv), quit the
                   Ollama app, stop running "ollama serve" processes, relaunch Ollama.
@@ -41,7 +42,7 @@ refused/skipped when OLLAMA_URL points at another host.
 
 Default: run in the foreground, tail logs, Ctrl+C stops everything started.
 Env (export in your shell; not read from .env files by this script):
-  LIGHTHOUSE_BROWSER  chrome | brave | edge | chromium | /path/to/browser (default: first installed)
+  SHERU_BROWSER    chrome | brave | edge | chromium | /path/to/browser (default: first installed)
   LLM_MODEL        backend model; only passed to the backend if set
                    (otherwise pulse-backend/.env or the built-in $DEFAULT_MODEL applies)
   BACKEND_PORT (default 8000), DASHBOARD_PORT (default 3000)
@@ -57,7 +58,7 @@ for a in "$@"; do
     -d|--detach) DETACH=1 ;; --no-open) OPEN=0 ;; --fix-ollama) FIX_OLLAMA=1 ;;
     -y|--yes) YES=1 ;;
     --aw-watchers) AW_WATCHERS=yes ;; --no-aw-watchers) AW_WATCHERS=no ;;
-    --no-buddy) BUDDY=0 ;; --no-browser) BROWSER=0 ;; --fresh) FRESH=1 ;;
+    --no-buddy) BUDDY=0 ;; --no-browser) BROWSER=0 ;; --fresh) FRESH=1 ;; --no-voice) VOICE=0 ;;
     -h|--help) usage; exit 0 ;;
     *) usage >&2; die "Unknown option: $a" ;;
   esac
@@ -289,7 +290,7 @@ else
   fi
   if [ -n "$AW_BIN" ]; then
     case "$(basename "$AW_BIN")" in
-      aw-server) warn "Only the Python aw-server was found ($AW_BIN); it does not support cors_regex, so the Lighthouse extension may be blocked. Install aw-server-rust (the official ActivityWatch.app/download includes it)." ;;
+      aw-server) warn "Only the Python aw-server was found ($AW_BIN); it does not support cors_regex, so the Sheru extension may be blocked. Install aw-server-rust (the official ActivityWatch.app/download includes it)." ;;
     esac
     info "Found ActivityWatch: ${AW_DIR:-PATH} (server: $AW_BIN)"
     info "Starting $(basename "$AW_BIN")"
@@ -396,8 +397,12 @@ fi
 BUDDY_STATE="disabled (--no-buddy)"
 if [ "$BUDDY" -eq 1 ] && [ "$(uname -s)" != "Darwin" ]; then BUDDY_STATE="macOS only (nudges appear in your browser tabs instead)"
 elif [ "$BUDDY" -eq 1 ]; then
+  if service_running buddy && ps -p "$(read_pid buddy)" -o command= 2>/dev/null | grep -q LighthouseBuddy; then
+    info "Replacing the old Lighthouse Buddy app with Sheru.app"
+    stop_service buddy
+  fi
   if service_running buddy; then BUDDY_STATE="on your desktop (already running)"
-  elif pgrep -f "Contents/MacOS/LighthouseBuddy" >/dev/null 2>&1; then BUDDY_STATE="already running (started outside start.sh)"
+  elif pgrep -f "Contents/MacOS/Sheru |Contents/MacOS/Sheru$|Contents/MacOS/LighthouseBuddy" >/dev/null 2>&1; then BUDDY_STATE="already running (started outside start.sh)"
   elif ! have swiftc; then BUDDY_STATE="needs the Xcode Command Line Tools: xcode-select --install"
   elif "$BUDDY_DIR/build.sh" >"$LOG_DIR/buddy-build.log" 2>&1; then
     info "Starting Sheru on your desktop"
@@ -415,9 +420,9 @@ fi
 BROWSER_STATE="not opened"
 if [ "$OPEN" -eq 0 ]; then BROWSER_STATE="not opened (--no-open)"
 elif [ "$BROWSER" -eq 0 ]; then BROWSER_STATE="disabled (--no-browser)"
-elif service_running browser; then BROWSER_STATE="already open (Lighthouse window)"
+elif service_running browser; then BROWSER_STATE="already open (Sheru window)"
 else
-  info "Opening a browser window with the Lighthouse extension installed"
+  info "Opening a browser window with the Sheru extension installed"
   start_bg browser "$ROOT_DIR" node "$ROOT_DIR/scripts/launch-browser.mjs" --ext "$EXT_DIR/dist" \
     --profile "$RUN_DIR/browser-profile" --url "http://localhost:$DASHBOARD_PORT"
   started browser
@@ -428,8 +433,17 @@ else
   elif service_running browser; then BROWSER_STATE="open, but the extension needs a manual install (see below)"
   else
     BROWSER_STATE="could not start (see .run/logs/browser.log)"
-    warn "Could not open the Lighthouse browser window:"; tail -n 5 "$LOG_DIR/browser.log" >&2 || true
+    warn "Could not open the Sheru browser window:"; tail -n 5 "$LOG_DIR/browser.log" >&2 || true
   fi
+fi
+
+# ---- Sheru's natural voice ------------------------------------------------------------
+if voice_installed; then VOICE_STATE="natural voice (on-device); switch it on in Settings > Voice"
+elif [ "$VOICE" -eq 0 ]; then VOICE_STATE="macOS voice (natural voice not installed; --no-voice)"
+else
+  info "Installing Sheru's natural voice in the background (~205 MB, one time; see .run/logs/voice.log)"
+  ( cd "$ROOT_DIR" && nohup "${NS[@]}" bash "$ROOT_DIR/scripts/install-voice.sh" </dev/null >>"$LOG_DIR/voice.log" 2>&1 & )
+  VOICE_STATE="installing in the background; Sheru uses the macOS voice until it is ready"
 fi
 
 # ---- summary --------------------------------------------------------------------
@@ -444,12 +458,14 @@ print("ActivityWatch reachable: %s | Ollama reachable: %s | model available: %s 
 line() { printf '%s|%s %s\n' "$C_BOLD" "$C_RESET" "$*"; }
 bar="+------------------------------------------------------------------------------"
 printf '\n%s%s%s\n' "$C_BOLD" "$bar" "$C_RESET"
-line "${C_BOLD}Lighthouse is running${C_RESET}"
+line "${C_BOLD}Sheru is running${C_RESET}"
 line ""
 line "Sheru     : $BUDDY_STATE"
 line "Browser   : $BROWSER_STATE"
 line "Dashboard : http://localhost:$DASHBOARD_PORT   (onboarding opens there on first run)"
 line "Sheru model: $SHERU_MODEL_STATE"
+line "Voice     : $VOICE_STATE"
+line "Settings  : http://localhost:$DASHBOARD_PORT/?view=settings"
 line "API docs  : http://localhost:$BACKEND_PORT/docs"
 line "Health    : $HEALTH_LINE"
 line "Ollama    : $OLLAMA_STATE; extension CORS: $CORS_STATE"
@@ -458,7 +474,7 @@ line "AW watchers : $AW_WATCHER_STATE"
 line "  (macOS asks for Accessibility / Input Monitoring permission on first run)"
 line ""
 case "$BROWSER_STATE" in
-  open,\ extension\ installed*) line "Extension : installed in the Lighthouse browser window (ID $EXTENSION_ID)" ;;
+  open,\ extension\ installed*) line "Extension : installed in the Sheru browser window (ID $EXTENSION_ID)" ;;
   *) line "Extension : to use your own browser: chrome://extensions -> Developer mode -> Load unpacked"
      line "            -> $EXT_DIR/dist   (pick the dist folder, not extension/)" ;;
 esac
@@ -490,7 +506,7 @@ on_exit() {
 }
 trap 'exit 130' INT
 trap 'exit 143' TERM
-trap 'exit 129' HUP   # Terminal window closed (e.g. Lighthouse.command): still clean up
+trap 'exit 129' HUP   # Terminal window closed (e.g. Sheru.command): still clean up
 trap on_exit EXIT
 touch "$LOG_DIR/backend.log" "$LOG_DIR/dashboard.log" "$LOG_DIR/ollama.log" "$LOG_DIR/buddy.log" "$LOG_DIR/browser.log"
 tail -n 0 -F "$LOG_DIR/backend.log" "$LOG_DIR/dashboard.log" "$LOG_DIR/ollama.log" "$LOG_DIR/buddy.log" "$LOG_DIR/browser.log" 2>/dev/null &
