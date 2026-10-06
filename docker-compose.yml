@@ -1,0 +1,35 @@
+# Ollama + Pulse backend. aw-server (ActivityWatch) runs on the host, not in a container.
+# aw-server must listen on an address reachable from the container (not 127.0.0.1 only),
+# e.g. set address = "0.0.0.0" in aw-server-rust config.toml. Otherwise, with DATA_SOURCE=auto,
+# the backend logs a warning and serves built-in sample data (source: "sample").
+services:
+  ollama:
+    image: ollama/ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    environment:
+      - OLLAMA_ORIGINS=chrome-extension://*
+    restart: unless-stopped
+
+  pulse-backend:
+    build: ./pulse-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - AW_SERVER_URL=http://host.docker.internal:5600
+      - OLLAMA_URL=http://ollama:11434
+      - LLM_MODEL=${LLM_MODEL:-qwen3.5:4b}
+      - LLM_TIMEOUT_SECONDS=${LLM_TIMEOUT_SECONDS:-120}
+      - AW_BUCKET_PREFIX=${AW_BUCKET_PREFIX:-aw-watcher-web-lighthouse}
+      - DATA_SOURCE=${DATA_SOURCE:-auto}
+      - STANDUP_FALLBACK=${STANDUP_FALLBACK:-template}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - ollama
+    restart: unless-stopped
+
+volumes:
+  ollama_data:

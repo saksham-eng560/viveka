@@ -1,0 +1,43 @@
+/* Content-script styles live inside a Shadow DOM, so only the theme tokens and the
+   utilities actually used by Overlay.tsx are emitted (no preflight, no page leakage). */
+@layer theme, utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities) source(none);
+@source "./Overlay.tsx";
+
+:host {
+  all: initial;
+  font-family: ui-sans-serif, -apple-system, "SF Pro Text", "Segoe UI", Inter, Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+/* Tailwind registers its --tw-* defaults with @property, which does not apply inside
+   shadow roots. Provide the fallbacks explicitly. */
+*, ::before, ::after {
+  box-sizing: border-box;
+  --tw-border-style: solid;
+  --tw-font-weight: initial;
+  --tw-leading: initial;
+  --tw-tracking: initial;
+  --tw-shadow: 0 0 #0000;
+  --tw-ring-shadow: 0 0 #0000;
+  --tw-inset-shadow: 0 0 #0000;
+  --tw-inset-ring-shadow: 0 0 #0000;
+  --tw-ring-offset-shadow: 0 0 #0000;
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+  border: 0;
+  margin: 0;
+  appearance: none;
+}
+
+button:focus-visible {
+  outline: 2px solid #6366f1;
+  outline-offset: 2px;
+}
+
+p {
+  margin: 0;
+}

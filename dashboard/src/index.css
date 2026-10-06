@@ -1,0 +1,68 @@
+@import "@fontsource-variable/inter";
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+  --color-productive: #4f46e5;
+  --color-distraction: #e11d48;
+}
+
+@layer base {
+  html {
+    color-scheme: light dark;
+  }
+  body {
+    @apply bg-zinc-50 text-zinc-900 antialiased dark:bg-zinc-950 dark:text-zinc-100;
+    font-feature-settings: "cv11", "ss01";
+  }
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-indigo-500;
+  }
+}
+
+.markdown h1,
+.markdown h2,
+.markdown h3 {
+  @apply mt-5 mb-2 text-sm font-semibold tracking-tight text-zinc-900 first:mt-0 dark:text-zinc-50;
+}
+.markdown h1 {
+  @apply text-lg;
+}
+.markdown h2 {
+  @apply text-base;
+}
+.markdown p {
+  @apply my-2 text-sm leading-relaxed text-zinc-700 dark:text-zinc-300;
+}
+.markdown ul {
+  @apply my-2 list-disc space-y-1 pl-5 text-sm text-zinc-700 dark:text-zinc-300;
+}
+.markdown ol {
+  @apply my-2 list-decimal space-y-1 pl-5 text-sm text-zinc-700 dark:text-zinc-300;
+}
+.markdown strong {
+  @apply font-semibold text-zinc-900 dark:text-zinc-100;
+}
+.markdown code {
+  @apply rounded bg-zinc-100 px-1 py-0.5 text-xs dark:bg-zinc-800;
+}
+
+@keyframes caret {
+  50% {
+    opacity: 0;
+  }
+}
+.caret {
+  animation: caret 1s steps(1) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
