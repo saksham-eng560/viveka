@@ -3,7 +3,7 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { crx } from "@crxjs/vite-plugin";
 import { resolve } from "node:path";
-import manifest from "./manifest.json";
+import manifest from "./src/manifest.json";
 
 // Tooling decision: Vite ^7 + @crxjs/vite-plugin 3.0.0 (its peer range covers Vite 3-8).
 // If 3.0.0 ever fails to build, fall back to the latest 2.x release of @crxjs/vite-plugin.

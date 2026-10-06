@@ -19,6 +19,7 @@ export function defaultSnapshot(): AppStateSnapshot {
     bufferedEvents: 0,
     settings: { ...DEFAULT_SETTINGS },
     lastReceipt: null,
+    brain: null,
   };
 }
 

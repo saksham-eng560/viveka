@@ -9,6 +9,10 @@ EXT_DIR="$ROOT_DIR/extension"
 DASH_DIR="$ROOT_DIR/dashboard"
 BACKEND_DIR="$ROOT_DIR/pulse-backend"
 VENV_DIR="$BACKEND_DIR/.venv"
+BUDDY_DIR="$ROOT_DIR/buddy"
+BUDDY_APP="$BUDDY_DIR/build/Lighthouse Buddy.app"
+BUDDY_BIN="$BUDDY_APP/Contents/MacOS/LighthouseBuddy"
+SHERU_MODEL="sheru"
 
 EXTENSION_ID="edaacbpplacmlbfilkabahkcmhopmpdj"
 DEFAULT_MODEL="qwen3.5:4b"
@@ -255,6 +259,8 @@ pid_is_ours() {
     ollama)    case "$cmd" in *ollama*) ;; *) return 1 ;; esac ;;
     aw-server) case "$cmd" in *aw-watcher*) return 1 ;; esac
                case "$cmd" in */aw-server-rust/aw-server-rust*|*/aw-server/aw-server*|aw-server-rust*|aw-server*|*/aw-server-rust*|*/aw-server|*/aw-server\ *) ;; *) return 1 ;; esac ;;
+    buddy)     case "$cmd" in *LighthouseBuddy*) ;; *) return 1 ;; esac ;;
+    browser)   case "$cmd" in *launch-browser.mjs*) ;; *) return 1 ;; esac ;;
     aw-watcher-window) case "$cmd" in *aw-watcher-window*) ;; *) return 1 ;; esac ;;
     aw-watcher-afk)    case "$cmd" in *aw-watcher-afk*) ;; *) return 1 ;; esac ;;
     *) return 1 ;;
@@ -326,7 +332,7 @@ stop_service() {
 
 stop_all() {
   local n found=0
-  for n in dashboard backend aw-watcher-window aw-watcher-afk aw-server ollama; do
+  for n in browser buddy dashboard backend aw-watcher-window aw-watcher-afk aw-server ollama; do
     [ -f "$(pid_file "$n")" ] && found=1
     stop_service "$n"
   done
@@ -384,5 +390,28 @@ supervised_child_alive() {
   for c in $(pgrep -P "$pid" 2>/dev/null || true); do
     pid_alive "$c" && return 0
   done
+  return 1
+}
+
+# ---- Sheru model (Ollama) ---------------------------------------------------------
+# ensure_sheru_model <base model>: build the "sheru" persona model from ollama/Modelfile.sheru
+# on top of <base model> (no download: it reuses the base weights). Rebuilt when the
+# Modelfile or the base model changes. Needs a reachable local Ollama.
+ensure_sheru_model() {
+  local base="$1" mf="$ROOT_DIR/ollama/Modelfile.sheru" stamp="$RUN_DIR/sheru-model.stamp" want tmp
+  have ollama || return 1
+  [ -f "$mf" ] || return 1
+  want="$base:$(shasum "$mf" | cut -d' ' -f1)"
+  if ollama list 2>/dev/null | awk 'NR>1{print $1}' | grep -Eq "^$SHERU_MODEL(:latest)?$" \
+     && [ "$(cat "$stamp" 2>/dev/null || true)" = "$want" ]; then
+    return 0
+  fi
+  mkdir -p "$RUN_DIR"
+  tmp="$RUN_DIR/Modelfile.sheru"
+  sed "s|^FROM .*|FROM $base|" "$mf" > "$tmp"
+  if ollama create "$SHERU_MODEL" -f "$tmp" >/dev/null 2>&1; then
+    echo "$want" > "$stamp"
+    return 0
+  fi
   return 1
 }

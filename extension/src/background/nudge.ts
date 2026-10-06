@@ -1,6 +1,7 @@
 import { effectiveCooldownSeconds, effectiveThresholdSeconds } from "../shared/config";
 import { MSG, type ContentMessage, type NudgeActionKind } from "../shared/messages";
 import type { CurrentTab, NudgePayload } from "../shared/types";
+import { brainAction, brainOnline, getShownAlert } from "./brain";
 import { LOW_SCORE_LIMIT } from "./constants";
 import { heuristicClassify, hostnameOf, isBrowserInternal } from "./heuristic";
 import { peekCache } from "./llm-client";
@@ -78,11 +79,20 @@ async function reinjectContentScript(tabId: number): Promise<boolean> {
 
 export const hideNudge = (tabId: number) => sendToTab(tabId, { type: MSG.HIDE_NUDGE });
 
+/** Show an overlay on a tab, injecting the content script first if the tab predates the extension. */
+export async function showNudge(tabId: number, payload: NudgePayload): Promise<boolean> {
+  const message: ContentMessage = { type: MSG.TRIGGER_NUDGE, payload };
+  if (await sendToTab(tabId, message)) return true;
+  return (await reinjectContentScript(tabId)) && (await sendToTab(tabId, message));
+}
+
 let evaluating = false;
 
 /** Fire the overlay when the user has been off-task past the threshold and no cooldown is active. */
 export async function evaluateNudge(now = Date.now()): Promise<boolean> {
   if (evaluating) return false;
+  // Sheru's brain (backend) is up: it judges the whole desktop and decides when to nudge.
+  if (brainOnline(now)) return false;
   evaluating = true;
   try {
     const st = await loadState();
@@ -99,9 +109,7 @@ export async function evaluateNudge(now = Date.now()): Promise<boolean> {
     if (!due) return false;
     const goal = snap.currentGoal;
     const payload = buildNudgePayload(tab, goal, minutesLeft(st.session, now));
-    const message: ContentMessage = { type: MSG.TRIGGER_NUDGE, payload };
-    let sent = await sendToTab(tab.tabId, message);
-    if (!sent && (await reinjectContentScript(tab.tabId))) sent = await sendToTab(tab.tabId, message);
+    const sent = await showNudge(tab.tabId, payload);
     if (!sent) return false; // nudge not shown: no cooldown, so the next tick retries
     await mutate((s) => {
       s.cooldownUntil = now + effectiveCooldownSeconds(s.snapshot.settings) * 1000;
@@ -126,8 +134,10 @@ async function collectReturnCandidates(goal: string | null): Promise<ReturnCandi
   return out;
 }
 
-/** Overlay buttons. Both actions hide the overlay and start the cooldown. */
+/** Overlay buttons. Every action hides the overlay and starts the cooldown; brain alerts are also reported back. */
 export async function handleNudgeAction(action: NudgeActionKind, now = Date.now()): Promise<void> {
+  const brainAlert = getShownAlert();
+  if (brainAlert !== null) void brainAction(action, brainAlert);
   const st = await loadState();
   const fromTab = st.nudgeVisibleTabId ?? st.snapshot.currentTab?.tabId ?? null;
   if (action === "back_to_work") {

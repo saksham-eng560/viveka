@@ -1,84 +1,170 @@
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import type { CSSProperties } from "react";
 import { minutesLeftText, nudgeHeadline } from "../shared/format";
 import type { NudgeActionKind } from "../shared/messages";
 import { quoteFor } from "../shared/quotes";
 import type { NudgePayload } from "../shared/types";
-import { QuoteBlock } from "../ui/Controls";
 
 interface OverlayProps {
   payload: NudgePayload | null;
   onAction: (action: NudgeActionKind) => void;
 }
 
-function Beacon() {
+// Friendly, light-only palette shared with Sheru's desktop bubble.
+const C = {
+  cream: "#FFF9EE",
+  alert: "#FFF2E8",
+  line: "#F2C27B",
+  alertLine: "#F4A26B",
+  ink: "#3A2416",
+  muted: "#8A6A55",
+  saffron: "#EE7F1B",
+  saffronDark: "#C9640F",
+  maroon: "#7A2E1D",
+};
+const FONT = 'ui-rounded, "SF Pro Rounded", "Nunito", -apple-system, "Segoe UI", system-ui, sans-serif';
+const SERIF = '"Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif';
+
+const KNOWN_ACTIONS = new Set<NudgeActionKind>(["dismiss", "back_to_work", "snooze", "its_work"]);
+
+function sheruUrl(): string | null {
+  try {
+    return chrome.runtime.getURL("sheru.svg");
+  } catch {
+    return null;
+  }
+}
+
+function Pill({ primary, onClick, children }: { primary?: boolean; onClick: () => void; children: string }) {
+  const style: CSSProperties = {
+    font: `700 12.5px/1 ${FONT}`,
+    padding: "8px 13px",
+    borderRadius: 999,
+    cursor: "pointer",
+    border: `1.5px solid ${primary ? C.saffron : C.line}`,
+    background: primary ? C.saffron : "#FFFFFF",
+    color: primary ? "#FFFFFF" : C.maroon,
+  };
   return (
-    <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" className="shrink-0">
-      <circle cx="12" cy="12" r="12" fill="#7A2E1D" />
-      <path d="M10 8h4l1.4 9h-6.8L10 8z" fill="#FBF3E4" />
-      <rect x="9.5" y="5.5" width="5" height="2.5" rx="0.6" fill="#E8730C" />
-      <rect x="9.3" y="11" width="5.4" height="1.6" fill="#B8860B" />
-    </svg>
+    <button type="button" onClick={onClick} style={style}>
+      {children}
+    </button>
   );
 }
 
 export function Overlay({ payload, onAction }: OverlayProps) {
   const reduce = useReducedMotion();
-  const mins = payload ? minutesLeftText(payload.minutesLeft) : null;
-  const quote = payload ? quoteFor("nudge", `${payload.hostname}|${payload.goal}|${payload.score}`) : null;
+  const brain = payload?.brain;
+  const mins = payload && !brain ? minutesLeftText(payload.minutesLeft) : null;
+  const quote = payload && !brain ? quoteFor("nudge", `${payload.hostname}|${payload.goal}|${payload.score}`) : null;
+  const img = sheruUrl();
+  const actions: { id: NudgeActionKind; label: string }[] = brain
+    ? brain.actions.filter((a): a is { id: NudgeActionKind; label: string } => KNOWN_ACTIONS.has(a.id as NudgeActionKind))
+    : [
+        { id: "back_to_work", label: "Return to work" },
+        { id: "dismiss", label: "Not now" },
+      ];
+  if (brain && actions.length === 0) actions.push({ id: "dismiss", label: "Got it" });
+  const warm = !!brain && (brain.kind === "distraction" || brain.level >= 3);
+
   return (
     <AnimatePresence>
-      {payload && quote && (
+      {payload && (
         <motion.div
           key="lighthouse-nudge"
           role="status"
           aria-live="polite"
           data-testid="lighthouse-nudge"
-          initial={reduce ? { opacity: 0 } : { opacity: 0, y: 12 }}
-          animate={reduce ? { opacity: 1 } : { opacity: 1, y: 0 }}
-          exit={reduce ? { opacity: 0 } : { opacity: 0, y: 12 }}
-          transition={{ duration: 0.22, ease: "easeOut" }}
-          className="fixed bottom-5 right-5 w-[360px] max-w-[calc(100vw-40px)] rounded-[10px] border border-line bg-surface p-4 text-ink"
+          initial={reduce ? { opacity: 0 } : { opacity: 0, x: -24, scale: 0.92 }}
+          animate={reduce ? { opacity: 1 } : { opacity: 1, x: 0, scale: 1 }}
+          exit={reduce ? { opacity: 0 } : { opacity: 0, x: -16, scale: 0.95 }}
+          transition={reduce ? { duration: 0.15 } : { type: "spring", stiffness: 380, damping: 24 }}
           style={{
             position: "fixed",
-            right: 20,
-            bottom: 20,
+            left: 16,
+            top: 16,
             zIndex: 2147483647,
-            boxShadow: "var(--lh-shadow-overlay)",
+            display: "flex",
+            alignItems: "flex-start",
+            gap: 4,
+            maxWidth: "calc(100vw - 32px)",
+            fontFamily: FONT,
+            color: C.ink,
           }}
         >
-          <div className="flex items-center gap-2">
-            <Beacon />
-            <span className="font-serif text-sm font-semibold text-heading">Lighthouse</span>
-            <span
-              className="ml-auto rounded-full bg-tint-maroon px-2 py-0.5 text-[11px] font-medium leading-[15px] text-heading"
-              data-testid="nudge-score"
-            >
-              Focus {payload.score}/100
-            </span>
-          </div>
-          <p className="mt-3 font-serif text-[17px] font-semibold leading-6 text-heading" data-testid="nudge-headline">
-            {nudgeHeadline(payload)}
-          </p>
-          {payload.reasoning && <p className="mt-1.5 text-xs leading-[17px] text-muted">{payload.reasoning}</p>}
-          {mins && <p className="mt-1.5 text-xs font-medium leading-[17px] text-ink">{mins}</p>}
-          <div className="mt-3">
-            <QuoteBlock quote={quote} size="sm" />
-          </div>
-          <div className="mt-4 flex items-center gap-2">
+          {img && (
+            <img
+              src={img}
+              alt=""
+              width={78}
+              height={90}
+              style={{ flex: "none", width: 78, height: "auto", marginTop: 2, filter: "drop-shadow(0 3px 6px rgba(40,20,8,.2))" }}
+            />
+          )}
+          <div
+            style={{
+              position: "relative",
+              width: 340,
+              maxWidth: "calc(100vw - 130px)",
+              padding: "13px 15px 14px",
+              borderRadius: 18,
+              background: warm ? C.alert : C.cream,
+              border: `2px solid ${warm ? C.alertLine : C.line}`,
+              boxShadow: "0 12px 30px rgba(58,36,22,.24), 0 2px 0 rgba(58,36,22,.06)",
+            }}
+          >
             <button
               type="button"
-              onClick={() => onAction("back_to_work")}
-              className="min-h-9 flex-1 rounded-[8px] bg-primary px-3 py-2 text-sm font-semibold text-primary-fg hover:bg-[var(--lh-primary-hover)]"
-            >
-              Return to work
-            </button>
-            <button
-              type="button"
+              aria-label="Close"
               onClick={() => onAction("dismiss")}
-              className="min-h-9 rounded-[8px] border border-line-strong bg-transparent px-3 py-2 text-sm font-medium text-ink hover:bg-bg"
+              style={{
+                position: "absolute",
+                top: 6,
+                right: 8,
+                border: 0,
+                background: "transparent",
+                color: C.muted,
+                fontSize: 18,
+                lineHeight: "18px",
+                cursor: "pointer",
+                padding: 2,
+              }}
             >
-              Not now
+              ×
             </button>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginRight: 18 }}>
+              <span style={{ font: `800 12.5px/1.2 ${FONT}`, color: C.saffronDark }}>
+                {brain ? brain.title || "Psst!" : "Sheru noticed"}
+              </span>
+              {!brain && (
+                <span
+                  data-testid="nudge-score"
+                  style={{ marginLeft: "auto", fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 999, background: "#F8E5C2", color: C.maroon }}
+                >
+                  Focus {payload.score}/100
+                </span>
+              )}
+            </div>
+            <p data-testid="nudge-headline" style={{ margin: "5px 0 0", font: `600 15px/1.42 ${FONT}`, color: C.ink }}>
+              {brain ? brain.text : nudgeHeadline(payload)}
+            </p>
+            {!brain && payload.reasoning && (
+              <p style={{ margin: "5px 0 0", fontSize: 12, lineHeight: 1.4, color: C.muted }}>{payload.reasoning}</p>
+            )}
+            {mins && <p style={{ margin: "5px 0 0", fontSize: 12, fontWeight: 600, color: C.ink }}>{mins}</p>}
+            {quote && (
+              <figure data-testid="quote" style={{ margin: "10px 0 0", paddingLeft: 10, borderLeft: `3px solid ${C.saffron}` }}>
+                <blockquote style={{ margin: 0, font: `italic 14px/1.45 ${SERIF}`, color: C.maroon }}>{quote.text}</blockquote>
+                <figcaption style={{ marginTop: 4, fontSize: 11, color: C.muted }}>— Swami Vivekananda, {quote.source}</figcaption>
+              </figure>
+            )}
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 12 }}>
+              {actions.map((a, i) => (
+                <Pill key={a.id} primary={i === 0} onClick={() => onAction(a.id)}>
+                  {a.label}
+                </Pill>
+              ))}
+            </div>
           </div>
         </motion.div>
       )}

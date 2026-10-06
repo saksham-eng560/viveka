@@ -1,0 +1,227 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 230" width="200" height="230" class="sheru mood-idle" role="img" aria-label="Sheru, a lion cub in a saffron turban">
+  <title>Sheru</title>
+  <defs>
+    <radialGradient id="sh-glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFE7A3" stop-opacity="0.95"/>
+      <stop offset="60%" stop-color="#FFD36B" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#FFC94D" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="sh-robe" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#F7952F"/>
+      <stop offset="100%" stop-color="#E9761A"/>
+    </linearGradient>
+    <linearGradient id="sh-turban" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FFA23D"/>
+      <stop offset="100%" stop-color="#EE7F1B"/>
+    </linearGradient>
+    <linearGradient id="sh-tea" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#C98A4B"/>
+      <stop offset="100%" stop-color="#9B5E2A"/>
+    </linearGradient>
+  </defs>
+  <style>
+    .sheru * { transform-box: view-box; }
+    .sheru .ol { stroke: #4A2A17; stroke-width: 3.6; stroke-linejoin: round; stroke-linecap: round; }
+    .sheru .ln { fill: none; stroke: #4A2A17; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+    .sheru .alt, .sheru .fx { display: none; }
+    .sh-all { animation: sh-breathe 3.6s ease-in-out infinite; transform-origin: 100px 214px; }
+    #sh-head { animation: sh-bob 3.6s ease-in-out infinite; transform-origin: 100px 150px; }
+    #sh-tail { animation: sh-tail 2.8s ease-in-out infinite; transform-origin: 128px 198px; }
+    #sh-eyes { animation: sh-blink 5.2s infinite; transform-origin: 100px 104px; }
+    @keyframes sh-breathe { 0%, 100% { transform: scale(1, 1); } 50% { transform: scale(1.014, 0.986); } }
+    @keyframes sh-bob { 0%, 100% { transform: rotate(0deg) translateY(0); } 50% { transform: rotate(-1.8deg) translateY(1.2px); } }
+    @keyframes sh-tail { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(-14deg); } }
+    @keyframes sh-blink { 0%, 47%, 51%, 100% { transform: scaleY(1); } 49% { transform: scaleY(0.08); } }
+    @media (prefers-reduced-motion: reduce) { .sheru * { animation: none !important; } }
+  </style>
+
+  <!-- soft ground shadow -->
+  <ellipse id="sh-shadow" cx="100" cy="219" rx="50" ry="7" fill="#3A1F0E" opacity="0.16"/>
+
+  <!-- wisdom glow (shown while sharing a quote) -->
+  <circle id="sh-glow-c" class="fx" cx="100" cy="98" r="92" fill="url(#sh-glow)"/>
+
+  <g class="sh-all">
+    <!-- tail -->
+    <g id="sh-tail">
+      <path d="M128 198 C 156 204, 172 186, 163 166" fill="none" stroke="#4A2A17" stroke-width="11" stroke-linecap="round"/>
+      <path d="M128 198 C 156 204, 172 186, 163 166" fill="none" stroke="#EFAE4A" stroke-width="5.5" stroke-linecap="round"/>
+      <g>
+        <circle cx="162" cy="160" r="9.5" class="ol" fill="#D06A22"/>
+        <circle cx="156.5" cy="155" r="5.5" class="ol" fill="#D06A22"/>
+        <circle cx="168" cy="155" r="5.5" class="ol" fill="#D06A22"/>
+        <circle cx="162" cy="160" r="9.5" fill="#D06A22"/>
+        <circle cx="156.5" cy="155" r="5.5" fill="#D06A22"/>
+        <circle cx="168" cy="155" r="5.5" fill="#D06A22"/>
+        <path d="M158 160 q4 -5 8 0" class="ln" stroke="#9E4C17" stroke-width="1.8"/>
+      </g>
+    </g>
+
+    <!-- feet -->
+    <g id="sh-feet">
+      <ellipse cx="82" cy="207" rx="14" ry="8.5" class="ol" fill="#F6BE5C"/>
+      <ellipse cx="118" cy="207" rx="14" ry="8.5" class="ol" fill="#F6BE5C"/>
+      <path d="M78 205 v4 M85 205 v4 M114 205 v4 M121 205 v4" class="ln" stroke-width="1.8"/>
+    </g>
+
+    <!-- body: saffron robe like Swamiji's -->
+    <g id="sh-body">
+      <path d="M64 206 C 57 176, 70 146, 100 146 C 130 146, 143 176, 136 206 Q 100 214 64 206 Z" class="ol" fill="url(#sh-robe)"/>
+      <path d="M86 150 Q 100 166 114 150" class="ln" stroke="#B4560E" stroke-width="2.2"/>
+      <path d="M72 196 Q 100 203 128 196" class="ln" stroke="#C9640F" stroke-width="2"/>
+    </g>
+
+    <!-- arms folded across the chest (the Chicago pose) -->
+    <g id="sh-arms">
+      <rect x="66" y="165" width="68" height="23" rx="11.5" class="ol" fill="#F08A24"/>
+      <path d="M86 167 Q 100 178 114 186" class="ln" stroke="#B4560E" stroke-width="2.2"/>
+      <circle cx="70" cy="181" r="7.5" class="ol" fill="#F6BE5C"/>
+      <circle cx="130" cy="172" r="7.5" class="ol" fill="#F6BE5C"/>
+    </g>
+
+    <!-- arms for waving hello -->
+    <g id="sh-arms-wave" class="alt">
+      <path d="M74 160 C 66 172, 66 186, 72 194" fill="none" stroke="#4A2A17" stroke-width="17" stroke-linecap="round"/>
+      <path d="M74 160 C 66 172, 66 186, 72 194" fill="none" stroke="#F08A24" stroke-width="10" stroke-linecap="round"/>
+      <circle cx="73" cy="195" r="7.5" class="ol" fill="#F6BE5C"/>
+      <g id="sh-wave-arm">
+        <path d="M126 162 C 138 152, 146 140, 150 128" fill="none" stroke="#4A2A17" stroke-width="17" stroke-linecap="round"/>
+        <path d="M126 162 C 138 152, 146 140, 150 128" fill="none" stroke="#F08A24" stroke-width="10" stroke-linecap="round"/>
+        <circle cx="151" cy="124" r="9" class="ol" fill="#F6BE5C"/>
+        <path d="M146 118 v-3 M151 116 v-3.5 M156 118 v-3" class="ln" stroke-width="1.8"/>
+      </g>
+    </g>
+
+    <!-- a little glass of cutting chai for breaks -->
+    <g id="sh-chai" class="alt">
+      <path d="M90 160 L 110 160 L 107 188 Q 100 191 93 188 Z" class="ol" fill="#FDF6EA" opacity="0.95"/>
+      <path d="M91.5 168 L 108.5 168 L 106.6 187 Q 100 189.6 93.4 187 Z" fill="url(#sh-tea)"/>
+      <path d="M95 154 q-4 -6 0 -11 M101 153 q-4 -6 0 -12 M107 154 q-4 -6 0 -11" fill="none" stroke="#C9B8A8" stroke-width="2" stroke-linecap="round" class="sh-steam"/>
+      <circle cx="88" cy="176" r="7.5" class="ol" fill="#F6BE5C"/>
+      <circle cx="112" cy="176" r="7.5" class="ol" fill="#F6BE5C"/>
+    </g>
+
+    <!-- head -->
+    <g id="sh-head">
+      <!-- mane: outlined circles first, then fills on top, so only the outer edge keeps an outline -->
+      <g id="sh-mane">
+        <g class="ol" fill="#D06A22">
+          <circle cx="100" cy="43" r="16"/><circle cx="123.5" cy="49.3" r="16"/><circle cx="140.7" cy="66.5" r="16"/>
+          <circle cx="147" cy="90" r="16"/><circle cx="140.7" cy="113.5" r="16"/><circle cx="123.5" cy="130.7" r="16"/>
+          <circle cx="100" cy="137" r="16"/><circle cx="76.5" cy="130.7" r="16"/><circle cx="59.3" cy="113.5" r="16"/>
+          <circle cx="53" cy="90" r="16"/><circle cx="59.3" cy="66.5" r="16"/><circle cx="76.5" cy="49.3" r="16"/>
+        </g>
+        <g fill="#D06A22">
+          <circle cx="100" cy="43" r="16"/><circle cx="123.5" cy="49.3" r="16"/><circle cx="140.7" cy="66.5" r="16"/>
+          <circle cx="147" cy="90" r="16"/><circle cx="140.7" cy="113.5" r="16"/><circle cx="123.5" cy="130.7" r="16"/>
+          <circle cx="100" cy="137" r="16"/><circle cx="76.5" cy="130.7" r="16"/><circle cx="59.3" cy="113.5" r="16"/>
+          <circle cx="53" cy="90" r="16"/><circle cx="59.3" cy="66.5" r="16"/><circle cx="76.5" cy="49.3" r="16"/>
+          <circle cx="100" cy="90" r="50"/>
+        </g>
+        <path d="M60 118 q6 6 12 6 M128 124 q6 0 12 -6 M88 141 q12 5 24 0" class="ln" stroke="#9E4C17" stroke-width="2"/>
+      </g>
+
+      <!-- ears peeking out beside the turban -->
+      <g id="sh-ears">
+        <g id="sh-ear-l"><circle cx="54" cy="60" r="13" class="ol" fill="#F6BE5C"/><circle cx="54" cy="60" r="6.5" fill="#F4A08F"/></g>
+        <g id="sh-ear-r"><circle cx="146" cy="60" r="13" class="ol" fill="#F6BE5C"/><circle cx="146" cy="60" r="6.5" fill="#F4A08F"/></g>
+      </g>
+
+      <!-- face -->
+      <circle id="sh-face" cx="100" cy="100" r="44" class="ol" fill="#F7C66A"/>
+      <ellipse cx="100" cy="122" rx="18" ry="12.5" fill="#FFE9BF"/>
+      <g id="sh-blush" fill="#FF8C78" opacity="0.5">
+        <ellipse cx="69" cy="117" rx="8.5" ry="5"/><ellipse cx="131" cy="117" rx="8.5" ry="5"/>
+      </g>
+
+      <!-- saffron turban (pagri) -->
+      <g id="sh-turban">
+        <path d="M60 76 C 56 44, 76 22, 100 21 C 124 22, 144 44, 140 76 C 128 67, 115 63, 100 63 C 85 63, 72 67, 60 76 Z" class="ol" fill="url(#sh-turban)"/>
+        <path d="M63 64 C 78 50, 98 38, 118 30" class="ln" stroke="#C9640F" stroke-width="2.3"/>
+        <path d="M68 73 C 88 58, 110 46, 136 42" class="ln" stroke="#C9640F" stroke-width="2.3"/>
+        <path d="M88 66 C 104 58, 122 54, 139 58" class="ln" stroke="#C9640F" stroke-width="2.1"/>
+        <path d="M72 42 C 78 35, 86 30, 94 28" fill="none" stroke="#FFD08A" stroke-width="3.2" stroke-linecap="round" opacity="0.9"/>
+        <ellipse cx="124" cy="31" rx="8.5" ry="6" transform="rotate(-24 124 31)" class="ol" fill="#F59028"/>
+      </g>
+
+      <!-- brows (worried) -->
+      <g id="sh-brows" class="alt">
+        <path d="M73 91 L 88 86" class="ln" stroke-width="3"/>
+        <path d="M112 86 L 127 91" class="ln" stroke-width="3"/>
+      </g>
+
+      <!-- eyes: open -->
+      <g id="sh-eyes">
+        <g id="sh-eye-l">
+          <ellipse cx="82" cy="104" rx="8.2" ry="9.6" fill="#2E1B10"/>
+          <circle cx="84.8" cy="100.6" r="3.1" fill="#FFFFFF"/>
+          <circle cx="79.6" cy="107.4" r="1.4" fill="#FFFFFF" opacity="0.9"/>
+        </g>
+        <g id="sh-eye-r">
+          <ellipse cx="118" cy="104" rx="8.2" ry="9.6" fill="#2E1B10"/>
+          <circle cx="120.8" cy="100.6" r="3.1" fill="#FFFFFF"/>
+          <circle cx="115.6" cy="107.4" r="1.4" fill="#FFFFFF" opacity="0.9"/>
+        </g>
+      </g>
+      <!-- eyes: happy ^ ^ -->
+      <g id="sh-eyes-happy" class="alt">
+        <path d="M74 107 Q 82 96 90 107" class="ln" stroke-width="3.4"/>
+        <path d="M110 107 Q 118 96 126 107" class="ln" stroke-width="3.4"/>
+      </g>
+      <!-- eyes: closed (sleep / serene) -->
+      <g id="sh-eyes-closed" class="alt">
+        <path d="M74 104 Q 82 111 90 104" class="ln" stroke-width="3.2"/>
+        <path d="M110 104 Q 118 111 126 104" class="ln" stroke-width="3.2"/>
+      </g>
+
+      <!-- nose -->
+      <path d="M93.5 113 Q 100 109.5 106.5 113 Q 104.5 119.5 100 120.5 Q 95.5 119.5 93.5 113 Z" fill="#5A2E1A"/>
+      <!-- mouths -->
+      <g id="sh-mouth-w"><path d="M100 120.5 v3 M91.5 124.5 Q 95.8 129 100 123.5 Q 104.2 129 108.5 124.5" class="ln" stroke-width="2.4"/></g>
+      <g id="sh-mouth-open" class="alt">
+        <path d="M100 120.5 v2" class="ln" stroke-width="2.2"/>
+        <ellipse cx="100" cy="127.5" rx="6" ry="5.2" fill="#7A2B24" class="ol" stroke-width="2"/>
+        <ellipse cx="100" cy="130" rx="3.4" ry="2" fill="#F27D7D"/>
+      </g>
+      <g id="sh-mouth-smile" class="alt">
+        <path d="M89 123 Q 100 138 111 123 Z" fill="#7A2B24" class="ol" stroke-width="2.2"/>
+        <ellipse cx="100" cy="130.5" rx="4.2" ry="2.3" fill="#F27D7D"/>
+      </g>
+      <g id="sh-mouth-o" class="alt"><circle cx="100" cy="127" r="3.6" fill="#7A2B24" class="ol" stroke-width="2"/></g>
+      <g id="sh-mouth-wobble" class="alt"><path d="M92 127.5 Q 96 124.5 100 127.5 Q 104 130.5 108 127.5" class="ln" stroke-width="2.4"/></g>
+      <!-- whisker dots -->
+      <g fill="#C98A3E" opacity="0.8">
+        <circle cx="87" cy="122" r="1.1"/><circle cx="84" cy="125" r="1.1"/>
+        <circle cx="113" cy="122" r="1.1"/><circle cx="116" cy="125" r="1.1"/>
+      </g>
+    </g>
+  </g>
+
+  <!-- effects -->
+  <g id="sh-zzz" class="fx" fill="#6B7BB5" font-family="ui-rounded, 'SF Pro Rounded', 'Nunito', system-ui, sans-serif" font-weight="800">
+    <text x="150" y="44" font-size="14" class="z1">z</text>
+    <text x="162" y="30" font-size="18" class="z2">z</text>
+    <text x="176" y="14" font-size="22" class="z3">Z</text>
+  </g>
+  <g id="sh-exclaim" class="fx">
+    <circle cx="164" cy="28" r="14" class="ol" fill="#FFF3DC"/>
+    <path d="M164 19 v11" stroke="#E2621B" stroke-width="4.5" stroke-linecap="round"/>
+    <circle cx="164" cy="36.5" r="2.6" fill="#E2621B"/>
+  </g>
+  <g id="sh-sweat" class="fx">
+    <path d="M150 72 C 150 72, 143 82, 143 86 A 7 7 0 0 0 157 86 C 157 82, 150 72, 150 72 Z" fill="#9FD3F5" stroke="#3E7FB3" stroke-width="2"/>
+    <ellipse cx="147.5" cy="85" rx="1.6" ry="2.4" fill="#FFFFFF"/>
+  </g>
+  <g id="sh-dots" class="fx" fill="#FFF8EC" stroke="#4A2A17" stroke-width="2.4">
+    <circle cx="152" cy="40" r="4.5" class="d1"/><circle cx="166" cy="30" r="5.5" class="d2"/><circle cx="182" cy="18" r="6.5" class="d3"/>
+  </g>
+  <g id="sh-sparkles" class="fx" fill="#FFC531" stroke="#B9720F" stroke-width="1.4" stroke-linejoin="round">
+    <path class="s1" d="M24 50 l3 8 l8 3 l-8 3 l-3 8 l-3 -8 l-8 -3 l8 -3 Z"/>
+    <path class="s2" d="M176 66 l2.4 6 l6 2.4 l-6 2.4 l-2.4 6 l-2.4 -6 l-6 -2.4 l6 -2.4 Z"/>
+    <path class="s3" d="M30 150 l2 5 l5 2 l-5 2 l-2 5 l-2 -5 l-5 -2 l5 -2 Z"/>
+    <path class="s4" d="M170 138 l2.6 6.4 l6.4 2.6 l-6.4 2.6 l-2.6 6.4 l-2.6 -6.4 l-6.4 -2.6 l6.4 -2.6 Z"/>
+  </g>
+  <g id="sh-heart" class="fx">
+    <path d="M164 46 C 164 40, 156 38, 154 44 C 152 38, 144 40, 144 46 C 144 52, 154 58, 154 58 C 154 58, 164 52, 164 46 Z" fill="#FF7A8A" stroke="#4A2A17" stroke-width="2.2"/>
+  </g>
+</svg>

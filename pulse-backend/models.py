@@ -8,7 +8,7 @@ from typing import Literal, Optional
 from pydantic import BaseModel, ConfigDict
 from pydantic.alias_generators import to_camel
 
-Source = Literal["aw", "sample"]
+Source = Literal["aw", "sample", "local"]
 
 
 class CamelModel(BaseModel):
@@ -70,7 +70,7 @@ class OllamaHealth(CamelModel):
 
 class HealthResponse(CamelModel):
     status: Literal["ok"] = "ok"
-    data_source: Literal["aw", "sample", "auto"]
+    data_source: Literal["aw", "sample", "auto", "local"]
     aw: AwHealth
     ollama: OllamaHealth
 

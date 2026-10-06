@@ -1,43 +1,52 @@
-# Lighthouse
+# Lighthouse · meet Sheru 🦁
 
-**Your privacy-first, local AI focus coach. Stop analyzing past distractions; start preventing them in real-time.**
+**A private, local focus buddy for your Mac.** Sheru is a little lion cub in a saffron turban who sits in the top-left corner of your screen. He knows your goals, watches what you are doing across the whole computer (apps, window titles, browser tabs, typing rhythm), and nudges you back, kindly and with humour, when you drift. In the quiet moments he shares a line from Swami Vivekananda or a fact about his life.
 
-Lighthouse is an intelligent, HeyClicky-inspired web companion built on ActivityWatch. It operates entirely on your machine, using local AI (Ollama) to understand the context of your browsing in real-time, proactively nudge you away from distractions, and synthesize your work sessions into actionable insights. No data leaves your machine.
+Everything runs on your machine: a local model (Ollama) for judgement and Sheru's voice, a local database for your history. Nothing leaves your computer.
+
+> *"Come up, O lions, and shake off the delusion that you are sheep."* (Swami Vivekananda, Chicago, 1893)
+> Sheru grew up on Swamiji's parable of the lion cub raised among sheep. When you wander off to a feed, he reminds you that you're a lion.
 
 ---
 
 ## Quick Navigation
 
-- [Run it in 2 minutes](#run-it-in-2-minutes)
+- [Run it (one command)](#run-it-one-command)
+- [What you'll see](#what-youll-see)
+- [How Sheru decides you're distracted](#how-sheru-decides-youre-distracted)
+- [60-second showcase](#60-second-showcase)
+- [Privacy and permissions](#privacy-and-permissions)
 - [Scripts reference](#scripts-reference)
-- [Everyday commands](#everyday-commands)
-- [Manual setup (without scripts)](#manual-setup-without-scripts)
-- [Configuration](#configuration)
 - [Architecture](#architecture)
 - [Troubleshooting](#troubleshooting)
 
 ---
 
-## Run it in 2 minutes
+## Run it (one command)
 
-### Prerequisites
-
-**macOS or Linux** (the scripts need `bash`, `curl`, `lsof`; Windows: use WSL or the manual setup below) • **Node.js** ^20.19 or ≥22.12 • **Python** ≥3.10 (or `uv`) • **Ollama** (optional: without it the extension uses heuristic mode and standups use a template) • **ActivityWatch** (optional: without it the backend uses sample data) • **Chrome/Brave** 116+
+**Prerequisites (macOS):** Node.js ≥ 20.19 · Python ≥ 3.10 or [`uv`](https://docs.astral.sh/uv/) · Xcode Command Line Tools (`xcode-select --install`, for Sheru's desktop app) · Google Chrome, Brave or Edge · [Ollama](https://ollama.com/download) (optional but recommended: Sheru's personalised lines and smart judging) · [ActivityWatch](https://activitywatch.net) (optional).
 
 ```bash
-# Clone the repo and enter the directory
 git clone https://github.com/saksham-eng560/vivekanand.git && cd vivekanand
-
-# One-time setup (installs deps, pulls the LLM model, builds the extension)
-./setup.sh
-
-# Start everything (backend + dashboard; also Ollama / ActivityWatch, but only if installed)
 ./start.sh
 ```
 
-#### ActivityWatch setup (optional)
+Or **double-click `Lighthouse.command`** in Finder. Same thing, in a Terminal window; close it (or press Ctrl+C) to stop everything.
 
-Without ActivityWatch the backend uses sample data. To track real activity:
+The first run installs everything (`./setup.sh`: npm + Python deps, the LLM, the `sheru` persona model, the extension build and the desktop app). Then `./start.sh`:
+
+1. starts Ollama, builds the **`sheru` model** (your base model + Sheru's persona, `ollama/Modelfile.sheru`, no extra download),
+2. starts the backend (Sheru's brain, `:8000`) and the dashboard (`:3000`),
+3. puts **Sheru on your desktop** (top-left, plus a 🦁 menu-bar item),
+4. opens a **browser window with the Lighthouse extension already installed** and the onboarding page.
+
+`./stop.sh` stops everything (when started with `--detach`). Useful flags: `--fresh` (start onboarding again), `--no-browser`, `--no-buddy`, `--detach`.
+
+> **Why a separate browser window?** Chrome deliberately does not let scripts install extensions into your everyday profile, and Chrome 137+ ignores `--load-extension`. The launcher (`scripts/launch-browser.mjs`) starts your Chrome/Brave/Edge with its own *Lighthouse* profile and installs the extension through the DevTools protocol. To use the extension in your normal browser instead: `chrome://extensions` → Developer mode → **Load unpacked** → choose **`extension/dist`** (the `dist` folder, not `extension/`).
+
+### ActivityWatch setup (optional)
+
+Sheru does not need ActivityWatch (it keeps its own local log). If you also want ActivityWatch's timeline: To track real activity:
 
 1. Download ActivityWatch from https://activitywatch.net/downloads/ and unzip it anywhere, e.g. `~/Downloads/activitywatch` or `/Applications/activitywatch` (or install `ActivityWatch.app`; it is found automatically, its Rust server lives in `Contents/Frameworks`, and `AW_HOME=/Applications/ActivityWatch.app` also works). The Python `aw-server` is used only if no Rust server exists anywhere, because it does not support `cors_regex` (the extension would be blocked). If it lives somewhere else, `export AW_HOME=/path/to/activitywatch` (the folder containing `aw-server-rust/`, `aw-watcher-window/`, `aw-watcher-afk/`; pointing at the server binary also works). If `AW_HOME` contains no server, `./start.sh` prints a warning, ignores it and uses the next install it finds (it does not fail). Only a local `AW_SERVER_URL` (localhost/127.0.0.1/::1) makes `./start.sh` start a server or watchers.
 2. Run `./start.sh`. If ActivityWatch is not already running it searches `AW_HOME`, `PATH`, `/Applications/ActivityWatch.app`, `~/Applications/ActivityWatch.app`, `~/Downloads/activitywatch`, `~/activitywatch`, `/Applications/activitywatch` and `~/Applications/activitywatch`, then starts `aw-server-rust` plus `aw-watcher-window` and `aw-watcher-afk` itself. You do **not** need the `aw-qt` tray app. If you installed `/Applications/ActivityWatch.app`, just open it: `./start.sh` detects it on `:5600` and does not start its own server. `./stop.sh` stops them (watchers first). Use `--no-aw-watchers` to start only the server. If ActivityWatch is already running from another launcher (e.g. aw-qt), watchers are not started unless you pass `--aw-watchers`, which may then duplicate watchers that are already running.
@@ -50,24 +59,53 @@ Without ActivityWatch the backend uses sample data. To track real activity:
 
    **What the watchers record (privacy):** `aw-watcher-window` records the active application and its full window titles; `aw-watcher-afk` records whether you are active or idle at the keyboard/mouse. Both are on by default, are stored only in the local aw-server database (macOS: `~/Library/Application Support/activitywatch/aw-server-rust/`, Linux: `~/.local/share/activitywatch/aw-server-rust/`), and never leave your machine. The data **persists after `./stop.sh`**. Disable with `./start.sh --no-aw-watchers`. To delete it, run `./stop.sh` and remove that folder (or delete buckets in the ActivityWatch UI at http://localhost:5600).
 
-After `./start.sh` completes, your browser will open the dashboard at http://localhost:3000. Then:
+## What you'll see
 
-### Load the Extension
+**1. Onboarding (dashboard, under a minute).** Name and age → your goals (type your own or tap a suggestion) and the apps/sites where work happens → what usually distracts you, how fast Sheru should speak up (**Gentle**, **Balanced**, or **Demo** for showcasing), how often you'd like Swamiji's quotes, chime/voice. Edit any time with **Edit goals**.
 
-1. Open `chrome://extensions/`
-2. Enable **Developer mode** (top-right toggle)
-3. Click **Load unpacked** and select the `extension/dist/` folder
-4. You should see "Lighthouse" in your toolbar
+**2. Sheru on your desktop.** A transparent, always-on-top window in the top-left corner. His eyes follow your cursor; he blinks, flicks his tail, waves, naps when you're away and sips chai on breaks. Click him for a menu (**Swamiji quote · Fun fact · Talk to me · 5-min break · Quiet 30 min · Dashboard**); drag him anywhere. Everything else on screen stays clickable; only Sheru and his speech bubble catch the mouse.
 
-### Try the Demo
+**3. Friendly alerts, never flashing.** A speech bubble with a short, warm, personalised line (written by the local model in Sheru's voice, with an instant template fallback) and buttons: **Back to work** (brings your last work app/tab to the front), **2 more min**, **It's for work** (Sheru remembers). When you return, he cheers.
 
-1. Click the **Lighthouse icon** in the toolbar, then click **Open side panel** in the popup
-2. Type a goal (e.g., "Building a React dashboard") and click **Start Session**
-3. Browse normally—when you stray off-task, a nudge appears; watch the focus score update in real-time
+**4. The browser extension.** Reports the active tab to Sheru's brain, shows the same friendly alert inside the page when the desktop app isn't running, and its popup shows your goals, what Sheru thinks of the current tab, today's focus/detour minutes and quick actions. The side panel keeps the classic focus sessions, tab grouping and extension manager.
 
-**For a full walkthrough,** see the [60-Second Demo Script](#60-second-demo-script).
+**5. The dashboard.** Live Sheru panel (status, goals, nudge pace, connections, recent nudges), your day's focus timeline and categories built from Sheru's whole-computer log, and an AI-written standup.
 
-**To stop:** Press Ctrl+C in the terminal running `./start.sh`.
+## How Sheru decides you're distracted
+
+Every second the coach (`pulse-backend/coach.py`) merges two signals:
+
+- **Desktop** (Sheru's app, every 2 s): frontmost app, its window title, seconds since your **last key press** and since **any input**, screen lock. Typing is measured with the system's idle counters. No key logging: Sheru knows *when* you typed, never *what*.
+- **Browser** (extension): active tab URL and title, audio, window focus.
+
+Each activity is judged against **your goals**: your own "it's for work" choices first, then your onboarding chips, then built-in rules (editors, docs, LeetCode → work; feeds, streaming, shopping → detours), and for anything ambiguous (YouTube, an unknown site or app) the **local model** decides from the title. *"Graph algorithms in 20 minutes – YouTube"* counts as DSA practice; *"Funny cats – YouTube"* does not.
+
+Four detectors, timed by your pace (`demo` / `balanced` / `gentle`):
+
+| Detector | When | What Sheru does |
+|---|---|---|
+| **Writing stall** | You were typing in a writing app (editor, doc, LeetCode…) and stopped | 1st: *"Thinking pause?"* + a Vivekananda quote as fuel · 2nd: *"Still stuck? One messy line."* · 3rd: **"You seem distracted"**, a gentle alert with Reset / Break / 2 more min. Typing again clears it with a cheer. (15 s / 90 s / 3 min per step) |
+| **Detour** | An off-goal app or site in front | Playful alert (10 s / 45 s / 2 min), then a firmer, funny one if you stay. Going back to work celebrates. |
+| **Hopping** | Lots of app/tab switching in a short time | *"Pick just one thing for the next 10 minutes?"* |
+| **Quiet moments** | Not typing, not distracted | A Swami Vivekananda quote (from the Complete Works, cited) or a fact about his life, every few minutes. |
+
+Plus: away from the keyboard or screen locked → Sheru naps (no nudges) and welcomes you back; long focus streaks get celebrated; breaks and "quiet" mode silence him.
+
+## 60-second showcase
+
+1. `./start.sh --fresh` (or double-click `Lighthouse.command`). The browser opens the onboarding; Sheru waves from the top-left.
+2. Onboard in ~30 s: your name, a goal like *Crack DSA for placements*, tick *VS Code* and *LeetCode*, tick *Instagram*/*YouTube*, choose **Demo** pace. Sheru greets you by name with Swamiji's *"Arise, awake…"*.
+3. **Typing stall:** open a doc or your editor, type a line, then stop. ~15 s later: *"Thinking pause?"* + quote; ~30 s: *"Still stuck?"*; ~45 s: **"You seem distracted"**. Type a word: Sheru cheers.
+4. **Detour:** open Instagram (or a funny YouTube video) in the Lighthouse window. After ~10 s Sheru pops a playful alert; click **Back to work** and he brings your editor back.
+5. Click Sheru → **Swamiji quote** / **Fun fact** / **Talk to me** (*"Who was Narendranath?"*).
+6. Show the dashboard: live status, nudges, and the day's timeline from Sheru's log.
+
+## Privacy and permissions
+
+- All processing is local: Ollama, the FastAPI backend and SQLite in `.data/` (gitignored). Delete `.data/` to forget everything; `./start.sh --fresh` just re-runs onboarding.
+- **Window titles** come from macOS Accessibility. Sheru's app is started by `start.sh`, so macOS asks once on behalf of your Terminal app (System Settings → Privacy & Security → Accessibility). Without it Sheru still sees app names, browser tabs (via the extension) and typing rhythm. The 🦁 menu has *Allow window titles…*.
+- Typing detection uses the system idle counters (`CGEventSourceSecondsSinceLastEventType`): no Input Monitoring permission, no keystroke contents.
+- Private/incognito tabs are reported only as "private window", never their URL or title.
 
 ---
 
@@ -77,8 +115,8 @@ These scripts automate setup, startup, and testing. All are idempotent. They nee
 
 | Script | What it does | Key flags | Example |
 |--------|-------------|-----------|---------|
-| `./setup.sh` | One-time install: checks Node/Python, installs deps, pulls the LLM model, builds the extension. Idempotent—safe to run multiple times. | `--dev` (also install test deps), `--skip-model` (don't pull LLM), `--with-env` (copy `.env.example` to `.env`), `-h/--help` | `./setup.sh --dev --with-env` |
-| `./start.sh` | Runs setup if needed; starts Ollama (if installed), ActivityWatch (`aw-server-rust` plus the window and AFK watchers, if a download/install is found; see [ActivityWatch setup](#activitywatch-setup-optional)), backend, and dashboard. Waits for services to be healthy, then prints a summary and opens the dashboard. Ctrl+C stops all services. | `--detach`/`-d` (run in background; use `./stop.sh` to stop), `--no-open` (don't open dashboard in browser), `--fix-ollama` (macOS only; see below), `-y/--yes` (skip the `--fix-ollama` prompt; required without a TTY), `--no-aw-watchers` (start only the ActivityWatch server), `--aw-watchers` (also start the watchers when ActivityWatch was already running; only needed when ActivityWatch.app / aw-qt owns the server; may duplicate watchers it already runs), `-h/--help` | `./start.sh -d`, `./start.sh --fix-ollama`, `AW_HOME=~/aw ./start.sh --no-aw-watchers` |
+| `./setup.sh` | One-time install: checks Node/Python, installs deps, pulls the LLM model, builds the `sheru` persona model, the extension and (macOS) Sheru's desktop app. Idempotent—safe to run multiple times. | `--dev` (also install test deps), `--skip-model` (don't pull LLM), `--with-env` (copy `.env.example` to `.env`), `-h/--help` | `./setup.sh --dev --with-env` |
+| `./start.sh` | Runs setup if needed (and rebuilds a stale extension); starts Ollama (if installed) and builds the `sheru` model, ActivityWatch (`aw-server-rust` plus the window and AFK watchers, if a download/install is found; see [ActivityWatch setup](#activitywatch-setup-optional)), backend, dashboard, **Sheru's desktop app** (macOS) and a **browser window with the extension installed**. Waits for services to be healthy, then prints a summary. Ctrl+C stops all services. Double-clicking `Lighthouse.command` runs it. | `--detach`/`-d` (run in background; use `./stop.sh` to stop), `--fresh` (re-run onboarding), `--no-buddy`, `--no-browser` (open the dashboard in your default browser instead), `--no-open` (open no browser at all), env `LIGHTHOUSE_BROWSER=chrome\|brave\|edge\|chromium\|<path>`, `--fix-ollama` (macOS only; see below), `-y/--yes` (skip the `--fix-ollama` prompt; required without a TTY), `--no-aw-watchers` (start only the ActivityWatch server), `--aw-watchers` (also start the watchers when ActivityWatch was already running; only needed when ActivityWatch.app / aw-qt owns the server; may duplicate watchers it already runs), `-h/--help` | `./start.sh -d`, `./start.sh --fix-ollama`, `AW_HOME=~/aw ./start.sh --no-aw-watchers` |
 | `./stop.sh` | Stops anything recorded in `.run/*.pid` (dashboard, backend, aw-watcher-window, aw-watcher-afk, aw-server, ollama; watchers are stopped before the server). A pid is only signalled if it is still the process that was started (command and start time are checked); otherwise the pid file is treated as stale and removed. Does nothing if there are no pid files. | (none) | `./stop.sh` |
 | `./test.sh` | Runs all three test suites (extension, backend, dashboard) and shows a pass/fail table. Needs `./setup.sh` (use `--dev`) run first; it only auto-installs the backend test dependencies if `pytest` is missing. | `--build` (also run both `npm run build`s, after the tests), `-h/--help` | `./test.sh --build` |
 
@@ -123,76 +161,44 @@ curl http://localhost:8000/docs   # use $BACKEND_PORT if you overrode it
 
 ---
 
-## Why Lighthouse?
-
-### The Problem
-- **Retrospective guilt:** Existing time trackers (RescueTime, basic ActivityWatch) show you *after* the fact that you wasted 3 hours on YouTube.
-- **Static rules fail:** A blocklist can't tell if YouTube is productive (learning React) or a distraction (watching cat videos)—context matters.
-- **Privacy vs. Intelligence:** Cloud-based AI assistants require sending your entire browsing history and screen data to external servers.
-
-### How Lighthouse Differs
-- **Proactive, not passive:** Real-time visual nudges and side-panel interactions when you stray off-task, not guilt-driven reports at day's end.
-- **Context-aware:** Uses local LLMs (Ollama) to analyze page titles and URLs dynamically against your *current goal*.
-- **Zero-cloud privacy:** Built on ActivityWatch's local SQLite and Ollama. No data transmission. No cloud surveillance.
-
----
-
-## Features
-
-### P0 — MVP (Hackathon)
-- **Smart tab tracking:** Chrome MV3 extension monitors active URL, title, and audio state, feeding a local ActivityWatch server.
-- **AI intent classification:** Real-time LLM evaluation (`qwen3.5:4b`, `llama3`, or `phi3`) scores your current page (0–100) and categorizes it based on your declared goal.
-- **Gentle nudges:** Non-punitive DOM overlays slide in when focus drops below 40/100 for more than 60 seconds (demo mode: 5 seconds).
-- **Side Panel UI:** Set goals, view live focus score, manage sessions, see AI/ActivityWatch status.
-- **Dashboard & insights:** React dashboard showing Active vs. Distraction time, context switches, timeline charts, and AI-generated standup notes.
-
-### P1 — Enhanced
-- Session receipts (AI summaries of deep-work blocks).
-- **Voice nudges (done):** spoken nudges ("Focus back on VS Code") via `chrome.tts`.
-- **Tab amnesia fix (done):** tabs are grouped automatically by AI category, and Context Reset suggests which low-focus tabs to close.
-
-### P2 — Future
-- macOS desktop integration (ScreenCaptureKit).
-- Multi-agent workspace (custom avatars per task).
-- Burnout detection (switch-rate analysis).
-
----
-
 ## Architecture
 
 ### System Overview
 
 ```mermaid
 flowchart TD
-    subgraph Browser["Chrome Extension - MV3"]
-        Background["Background Service Worker"]
-        Offscreen["Offscreen Document - Keep-Alive"]
-        SidePanel["Side Panel - React UI"]
-        ContentScript["Content Script - DOM Overlay"]
-        Background <--> |"Message Passing"| SidePanel
-        Background <--> |"Message Passing"| ContentScript
-        Background <--> |"Keep-Alive Ping"| Offscreen
+    subgraph Desktop["Sheru on the desktop (macOS app, buddy/)"]
+        Panel["Transparent always-on-top window\nWKWebView: buddy/web (Sheru SVG + bubbles)"]
+        Sensors["Sensors every 2s: frontmost app, window title (Accessibility),\nkey-idle / input-idle counters, screen lock"]
     end
 
-    subgraph LocalSystem["User's Local Machine"]
-        Ollama["Ollama :11434"]
-        AW["aw-server-rust :5600"]
-        DB[("SQLite DB")]
-        PulseBackend["Pulse Backend - FastAPI :8000"]
-        Dashboard["Pulse Dashboard - React :3000"]
-        Sample["Built-in sample data"]
-        Template["Template standup"]
-
-        Background -- "REST: classify (/api/generate)" --> Ollama
-        Background -- "REST: heartbeats" --> AW
-        AW --> DB
-        PulseBackend -- "REST read: /api/0/buckets/..." --> AW
-        PulseBackend -- "REST: standup generation" --> Ollama
-        PulseBackend -. "fallback: AW unreachable or errors (DATA_SOURCE=auto)" .-> Sample
-        PulseBackend -. "fallback: Ollama down (STANDUP_FALLBACK=template)" .-> Template
-        Dashboard -- "GET /api/summary, /api/timeline; POST /api/generate-standup" --> PulseBackend
+    subgraph Browser["Chrome extension (MV3)"]
+        Background["Background service worker"]
+        Popup["Popup + side panel"]
+        ContentScript["Content script: friendly in-page alert"]
     end
+
+    subgraph Local["Your machine only"]
+        Brain["Backend :8000 (FastAPI)\ncoach.py = Sheru's brain"]
+        Store[("SQLite + profile.json in .data/")]
+        Ollama["Ollama :11434\nqwen3.5:4b + 'sheru' persona model"]
+        AW["ActivityWatch :5600 (optional)"]
+        Dashboard["Dashboard :3000\nonboarding + Sheru panel + charts"]
+    end
+
+    Sensors -- "POST /api/desktop/sample" --> Brain
+    Panel -- "GET /api/buddy/state, POST /api/buddy/action, /chat" --> Brain
+    Background -- "POST /api/browser/sample (tab url/title)" --> Brain
+    Brain -- "verdict, alerts (if desktop app is off), commands" --> Background
+    Background --> ContentScript
+    Brain -- "classify ambiguous activity, write Sheru's lines, chat" --> Ollama
+    Brain --> Store
+    Dashboard -- "/api/profile, /api/today, /api/summary, /api/timeline" --> Brain
+    Background -. "standalone fallback when the backend is down" .-> Ollama
+    Background -. "heartbeats" .-> AW
 ```
+
+The coach judges activity in layers: your "it's for work" overrides → onboarding chips → built-in rules → the local model for ambiguous titles (cached), with an instant heuristic answer meanwhile. Sheru's lines come from the `sheru` model with template fallbacks, so every alert is instant even when Ollama is down. The dashboard's summary/timeline read Sheru's whole-computer log (`DATA_SOURCE=auto`: local log → ActivityWatch → sample data).
 
 ### Event Flow
 
@@ -236,8 +242,16 @@ lighthouse/
 ├── start.sh                     (Start all services)
 ├── stop.sh                      (Stop background services)
 ├── test.sh                      (Run all test suites)
+├── Lighthouse.command           (Double-click launcher for Finder: runs ./start.sh)
+├── buddy/                       (Sheru, the desktop buddy)
+│   ├── build.sh                 (swiftc build of "Lighthouse Buddy.app"; rebuilds only on change)
+│   ├── macos/                   (main.swift: transparent panel, sensors, menu bar; Info.plist; AppIcon.icns)
+│   └── web/                     (Sheru's UI served at /buddy: sheru.svg, buddy.js, buddy.css)
+├── ollama/
+│   └── Modelfile.sheru          (Sheru's persona layered on the base model)
 ├── scripts/
-│   └── lib.sh                   (Shared shell utilities for the scripts)
+│   ├── lib.sh                   (Shared shell utilities for the scripts)
+│   └── launch-browser.mjs       (Opens Chrome/Brave/Edge with the extension installed)
 ├── docs/
 │   └── business/                (Business plan)
 │       ├── Lighthouse_Business_Plan.pdf
@@ -251,14 +265,15 @@ lighthouse/
 │       └── ollama.log
 │
 ├── extension/                   (Chrome MV3 extension)
-│   ├── manifest.json
 │   ├── package.json
 │   ├── vite.config.ts
 │   ├── tsconfig.json
 │   ├── scripts/                 (gen-icons.mjs)
 │   ├── src/
+│   │   ├── manifest.json        (lives in src/ so the extension/ folder can't be loaded by mistake)
 │   │   ├── background/          (Service worker & tab tracking)
 │   │   │   ├── index.ts
+│   │   │   ├── brain.ts         (Sheru's brain client) / brain-sync.ts (alerts, commands)
 │   │   │   ├── aw-client.ts    (ActivityWatch REST calls)
 │   │   │   ├── llm-client.ts   (Ollama API)
 │   │   │   ├── state.ts        (In-memory state, persistence)
@@ -281,8 +296,14 @@ lighthouse/
 │   │   └── assets/              (Icons)
 │   └── dist/                    (Built output—load unpacked here)
 │
-├── pulse-backend/               (FastAPI analytics server)
-│   ├── main.py                  (Routes: /api/summary, /api/timeline, etc.)
+├── pulse-backend/               (FastAPI: Sheru's brain + analytics)
+│   ├── main.py                  (Routes: /api/profile, /api/buddy/*, /api/desktop|browser/sample, /api/summary, ...)
+│   ├── coach.py                 (The coach engine: stall/detour/hopping/wisdom detectors)
+│   ├── catalog.py               (Onboarding chips + rules for apps and sites)
+│   ├── persona.py               (Sheru's voice: templates + local-model lines, classification, chat)
+│   ├── vivekananda.py           (Cited quotes and facts)
+│   ├── profile_store.py         (Onboarding profile, .data/profile.json)
+│   ├── activity_store.py        (SQLite log of segments and nudges)
 │   ├── config.py                (Environment & settings)
 │   ├── models.py                (Pydantic response models)
 │   ├── aw_queries.py            (Fetch & process ActivityWatch events)
@@ -451,12 +472,17 @@ DATA_SOURCE=auto
 STANDUP_FALLBACK=template
 AW_BUCKET_PREFIX=aw-watcher-web-lighthouse
 LLM_TIMEOUT_SECONDS=120
+BUDDY_MODEL=sheru
+LLM_CLASSIFY=on
 ```
 
+- `LIGHTHOUSE_DATA_DIR` – where Sheru keeps `profile.json` and `lighthouse.db` (default `<repo>/.data`)
+- `BUDDY_MODEL` – Ollama model for Sheru's voice and chat (default `sheru`, built by the scripts; falls back to `LLM_MODEL`)
+- `LLM_CLASSIFY` – `on` (local model judges ambiguous activity and writes Sheru's lines) or `off` (rules + templates only)
 - `AW_SERVER_URL` – ActivityWatch server URL
 - `OLLAMA_URL` – Ollama API endpoint
 - `LLM_MODEL` – which model to use for standup generation
-- `DATA_SOURCE` – `auto` (default, tries AW, falls back to sample), `aw` (strict), `sample` (demo data)
+- `DATA_SOURCE` – `auto` (default: Sheru's local log, then ActivityWatch, then sample), `local`, `aw` (strict), `sample` (demo data)
 - `STANDUP_FALLBACK` – `template` (deterministic fallback if Ollama fails), `off` (return 503)
 - `AW_BUCKET_PREFIX` – ActivityWatch bucket name prefix (default: `aw-watcher-web-lighthouse`)
 - `LLM_TIMEOUT_SECONDS` – timeout for LLM calls (default 120)
@@ -510,29 +536,23 @@ cd ../dashboard && npm run typecheck
 
 ## 60-Second Demo Script
 
-1. **[0:00–0:10] Set Goal:** Open the side panel (click the Lighthouse icon, then click **Open side panel** in the popup). Type: *"Building a React dashboard."* Select **25 min**. Click **Start Session**.
-
-2. **[0:10–0:25] Productive Work:** Open a VS Code web tab or GitHub. Watch the side panel:
-   - Focus Score: **95/100**
-   - Category: **Coding**
-   - AI status: **Online**
-   - Reason: *"Relevant to React dashboard"*
-
-3. **[0:25–0:40] The Distraction:** Open a new tab and navigate to Reddit. Wait ~5 seconds (demo mode threshold; normal is 60 seconds).
-
-4. **[0:40–0:45] The Nudge:** A styled overlay slides in from the bottom-right:
-   > *"Taking a break? reddit.com doesn't align with 'Building a React dashboard'. (Score: 10/100)"*
-   
-   Buttons: **Dismiss** | **Back to Work**
-
-5. **[0:45–0:60] Standup Magic:** Switch to the Pulse Dashboard (http://localhost:3000). Click **Generate Standup**. Text types out:
-   > *"Today, you spent 15 minutes focused on the React dashboard. You reviewed code on GitHub and spent 5 minutes on Reddit. Tomorrow, stay focused on component architecture."*
-   
-   Emphasize: **✅ No data left your machine.**
+See [60-second showcase](#60-second-showcase) above. The classic browser-only flow still works too: popup → **Open side panel** → set a goal → **Start Session**.
 
 ---
 
 ## Troubleshooting
+
+### Sheru and the extension
+
+**The extension popup is a small blank/white box.** The wrong folder was loaded, or the build was stale. Remove Lighthouse in `chrome://extensions`, then *Load unpacked* → **`extension/dist`** (the manifest now lives in `extension/src`, so loading `extension/` shows "manifest missing" instead of a blank popup). Simplest: just use the browser window `./start.sh` opens; it always installs the fresh build (and `start.sh` rebuilds `dist` when sources change).
+
+**Sheru doesn't appear.** Check the 🦁 in the menu bar (Show / Hide Sheru, Reset position). See `.run/logs/buddy.log` and `.run/logs/buddy-build.log`; building needs the Xcode Command Line Tools (`xcode-select --install`). Sheru sleeps with "Snoozing…" if the backend is down.
+
+**Sheru knows the app but not the window title.** Grant Accessibility to your Terminal app (System Settings → Privacy & Security → Accessibility), or use the 🦁 menu → *Allow window titles…*, then restart `./start.sh`.
+
+**Alerts are too fast / too slow.** Switch the pace in the dashboard's Sheru panel: Demo (seconds), Balanced (~45–90 s), Gentle (2–3 min).
+
+**Sheru's lines all sound the same.** Ollama isn't reachable, so templates are used. `curl http://localhost:11434/api/tags` should answer; `ollama list` should show `sheru`.
 
 ### Script-Specific Issues
 

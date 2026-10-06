@@ -1,7 +1,7 @@
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import manifest from "../manifest.json";
+import manifest from "./manifest.json";
 
 function walk(dir: string): string[] {
   return readdirSync(dir).flatMap((f) => {
@@ -25,15 +25,21 @@ describe("manifest", () => {
     expect(manifest.description).not.toMatch(/\bAI\b/);
   });
 
-  it("limits host permissions to local Ollama and ActivityWatch", () => {
+  it("limits host permissions to local Ollama, ActivityWatch and Sheru's brain", () => {
     expect([...manifest.host_permissions].sort()).toEqual(
       [
         "http://127.0.0.1:11434/*",
         "http://127.0.0.1:5600/*",
+        "http://127.0.0.1:8000/*",
         "http://localhost:11434/*",
         "http://localhost:5600/*",
+        "http://localhost:8000/*",
       ].sort(),
     );
+  });
+
+  it("exposes only Sheru's picture to web pages", () => {
+    expect(manifest.web_accessible_resources).toEqual([{ resources: ["sheru.svg"], matches: ["<all_urls>"] }]);
   });
 
   it("wires popup, side panel, content script and a stable public key", () => {

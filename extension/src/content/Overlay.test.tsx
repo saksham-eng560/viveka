@@ -81,3 +81,32 @@ describe("Overlay", () => {
     expect(shadow.querySelector('[data-testid="lighthouse-nudge"]')).toBeNull();
   });
 });
+
+describe("Overlay with a message from Sheru's brain", () => {
+  const brainPayload: NudgePayload = {
+    ...payload,
+    brain: {
+      id: 9, kind: "distraction", title: "Psst!", text: "Instagram is cute, but DSA is cuter. Shall we hop back?", level: 1,
+      actions: [{ id: "back_to_work", label: "Back to work" }, { id: "snooze", label: "2 more min" }, { id: "its_work", label: "It's for work" }, { id: "weird", label: "Ignored" }],
+    },
+  };
+
+  it("shows Sheru's own words and only known buttons, without the legacy score and quote", async () => {
+    const { shadow, onAction } = await mountInShadow(brainPayload);
+    const text = shadow.textContent ?? "";
+    expect(text).toContain("Psst!");
+    expect(text).toContain("DSA is cuter");
+    expect(shadow.querySelector('[data-testid="nudge-score"]')).toBeNull();
+    expect(shadow.querySelector('[data-testid="quote"]')).toBeNull();
+    const labels = [...shadow.querySelectorAll("button")].map((b) => b.textContent);
+    expect(labels).toEqual(["×", "Back to work", "2 more min", "It's for work"]);
+    await act(async () => [...shadow.querySelectorAll("button")].find((b) => b.textContent === "2 more min")!.click());
+    await act(async () => [...shadow.querySelectorAll("button")].find((b) => b.textContent === "×")!.click());
+    expect(onAction.mock.calls).toEqual([["snooze"], ["dismiss"]]);
+  });
+
+  it("shows Sheru's picture from the extension", async () => {
+    const { shadow } = await mountInShadow(brainPayload);
+    expect(shadow.querySelector("img")?.getAttribute("src")).toContain("sheru.svg");
+  });
+});

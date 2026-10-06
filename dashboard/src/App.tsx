@@ -6,14 +6,47 @@ import { QuoteBlock } from "./components/ui/quote-block";
 import { CategoryBreakdown } from "./features/CategoryBreakdown";
 import { MetricCards } from "./features/MetricCards";
 import { StandupGenerator } from "./features/StandupGenerator";
+import { Onboarding } from "./features/Onboarding";
+import { SheruPanel } from "./features/SheruPanel";
 import { StatusBar } from "./features/StatusBar";
 import { TimelineChart } from "./features/TimelineChart";
-import { apiErrorMessage, getHealth, getSummary, getTimeline, localTimeZone } from "./lib/api";
+import { apiErrorMessage, getHealth, getProfile, getSummary, getTimeline, localTimeZone } from "./lib/api";
 import { toDateInputValue } from "./lib/format";
 import { quoteFor } from "./lib/quotes";
-import type { DailySummaryResponse, HealthResponse, TimelineResponse } from "./lib/types";
+import type { DailySummaryResponse, HealthResponse, Profile, TimelineResponse } from "./lib/types";
 
+const wantsOnboarding = () => new URLSearchParams(window.location.search).has("onboarding");
+
+/** Root: first run (no profile) or ?onboarding=1 shows the onboarding; otherwise the dashboard. */
 export default function App() {
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [checked, setChecked] = useState(false);
+  const [onboarding, setOnboarding] = useState(wantsOnboarding);
+
+  useEffect(() => {
+    getProfile()
+      .then((r) => {
+        setProfile(r.profile);
+        if (!r.exists) setOnboarding(true);
+      })
+      .catch(() => undefined) // backend down: show the dashboard, which explains the problem
+      .finally(() => setChecked(true));
+  }, []);
+
+  const closeOnboarding = (p: Profile | null) => {
+    if (p) setProfile(p);
+    setOnboarding(false);
+    if (wantsOnboarding()) window.history.replaceState(null, "", window.location.pathname);
+  };
+
+  if (!checked) return <div className="min-h-screen" aria-busy="true" />;
+  if (onboarding) {
+    return <Onboarding initial={profile} onDone={(p) => closeOnboarding(p)} onCancel={profile ? () => closeOnboarding(null) : undefined} />;
+  }
+  return <Dashboard profile={profile} onProfile={setProfile} onEditGoals={() => setOnboarding(true)} />;
+}
+
+function Dashboard({ profile, onProfile, onEditGoals }: { profile: Profile | null; onProfile: (p: Profile) => void; onEditGoals: () => void }) {
   const [date, setDate] = useState(() => toDateInputValue(new Date()));
   const [summary, setSummary] = useState<DailySummaryResponse | null>(null);
   const [timeline, setTimeline] = useState<TimelineResponse | null>(null);
@@ -91,11 +124,15 @@ export default function App() {
             <Button variant="outline" size="sm" onClick={() => void load(date)} disabled={loading} aria-label="Refresh data">
               {loading ? "Refreshing..." : "Refresh"}
             </Button>
+            <Button variant="primary" size="sm" onClick={onEditGoals}>
+              {profile ? "Edit goals" : "Set up Sheru"}
+            </Button>
           </div>
         </div>
       </header>
 
       <main className="mx-auto max-w-6xl space-y-6 px-4 py-6 sm:px-6">
+        {profile && <SheruPanel profile={profile} onProfile={onProfile} />}
         {error && (
           <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-(--lh-radius) border border-line bg-tint-maroon p-4 text-sm text-heading">
             <div>
@@ -112,7 +149,7 @@ export default function App() {
           <Card className="space-y-4 p-6 text-sm text-ink">
             <QuoteBlock quote={quoteFor("emptyDay", date)} className="mx-auto max-w-xl" />
             <p className="text-center">
-              No tracked activity for this day yet. Begin a focus session with the Lighthouse extension and your day will appear here.
+              No tracked activity for this day yet. Sheru starts logging as soon as the desktop buddy or the extension is running.
             </p>
           </Card>
         )}

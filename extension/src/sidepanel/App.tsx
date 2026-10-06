@@ -200,6 +200,32 @@ function ViewTabs({ view, onChange }: { view: View; onChange: (v: View) => void 
   );
 }
 
+/** Sheru's brain (backend coach): goals from onboarding and what it thinks of the current tab. */
+function BrainCard({ state }: { state: AppStateSnapshot }) {
+  const b = state.brain;
+  if (!b?.online) return null;
+  const verdict = b.verdict === "focus" ? "on track" : b.verdict === "distraction" ? "a detour" : "neutral";
+  return (
+    <Card className="flex items-start gap-3 py-3" >
+      <img src="/sheru.svg" alt="" width={44} height={50} className="shrink-0" />
+      <div className="min-w-0 text-xs leading-[18px]" data-testid="brain-card">
+        <p className="m-0 text-sm font-semibold text-heading">
+          {b.firstName ? `Sheru is with you, ${b.firstName}` : "Sheru is with you"}
+        </p>
+        {b.label && (
+          <p className="m-0 text-muted">
+            {b.label} looks like <b className="text-ink">{verdict}</b>.
+          </p>
+        )}
+        {b.goals.length > 0 && <p className="m-0 mt-1 text-ink">Goals: {b.goals.join(" · ")}</p>}
+        <p className="m-0 mt-1 text-muted">
+          {b.buddyOnline ? "Watching your whole Mac from the desktop." : "Desktop buddy is off; nudges show in your tabs."} Sessions below are optional.
+        </p>
+      </div>
+    </Card>
+  );
+}
+
 export function App() {
   const { state, error } = useAppState();
   const [busy, setBusy] = useState<string | null>(null);
@@ -239,6 +265,7 @@ export function App() {
           <p className="m-0 text-[11px] leading-[15px] text-muted">A quiet companion for focused work</p>
         </div>
       </header>
+      <BrainCard state={state} />
       <StatusBadges state={state} />
       <ViewTabs view={view} onChange={setView} />
 

@@ -1,6 +1,7 @@
 import { cleanup } from "@testing-library/react";
 import { afterEach, beforeEach, vi } from "vitest";
 import { resetAwClientForTests } from "../background/aw-client";
+import { resetBrainForTests } from "../background/brain";
 import { resetLlmClientForTests } from "../background/llm-client";
 import { resetStateForTests } from "../background/state";
 import { resetTrackerForTests } from "../background/tracker";
@@ -11,6 +12,7 @@ beforeEach(() => {
   resetStateForTests();
   resetLlmClientForTests();
   resetAwClientForTests();
+  resetBrainForTests();
   resetTrackerForTests();
 });
 

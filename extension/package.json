@@ -1,6 +1,6 @@
 {
   "name": "lighthouse-extension",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
   "type": "module",
   "description": "Lighthouse Chrome MV3 extension - a calm, private focus companion",
@@ -9,7 +9,9 @@
     "build": "vite build",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "icons": "node scripts/gen-icons.mjs"
+    "icons": "node scripts/gen-icons.mjs",
+    "prebuild": "node scripts/sync-sheru.mjs",
+    "predev": "node scripts/sync-sheru.mjs"
   },
   "dependencies": {
     "framer-motion": "^14.0.0",

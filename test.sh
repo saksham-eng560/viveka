@@ -7,7 +7,7 @@ BUILD=0
 for a in "$@"; do
   case "$a" in
     --build) BUILD=1 ;;
-    -h|--help) echo "Usage: ./test.sh [--build]   Runs extension, dashboard and backend tests; --build also runs both npm builds after the tests. Requires ./setup.sh first (backend test deps are installed automatically). With --build, if LLM_MODEL is set it is built into the extension as VITE_LLM_MODEL (same as setup.sh); otherwise the extension default/.env applies."; exit 0 ;;
+    -h|--help) echo "Usage: ./test.sh [--build]   Runs extension, dashboard and backend tests (plus a Swift type-check of the desktop buddy on macOS); --build also runs both npm builds after the tests. Requires ./setup.sh first (backend test deps are installed automatically). With --build, if LLM_MODEL is set it is built into the extension as VITE_LLM_MODEL (same as setup.sh); otherwise the extension default/.env applies."; exit 0 ;;
     *) die "Unknown option: $a" ;;
   esac
 done
@@ -37,6 +37,11 @@ if [ ! -x "$VENV_DIR/bin/pytest" ]; then
   else "$VENV_DIR/bin/python" -m pip install -q -r "$BACKEND_DIR/requirements-dev.txt"; fi
 fi
 run "backend tests" "$BACKEND_DIR" .venv/bin/pytest -q
+
+# Sheru's desktop app: type-check the Swift source (no rebuild, so macOS permissions are kept)
+if [ "$(uname -s)" = "Darwin" ] && have swiftc; then
+  run "buddy (swift)" "$BUDDY_DIR" swiftc -typecheck -swift-version 5 -target "$(uname -m)-apple-macos13.0" macos/main.swift
+fi
 
 if [ "$BUILD" -eq 1 ]; then
   if [ -n "${LLM_MODEL:-}" ]; then

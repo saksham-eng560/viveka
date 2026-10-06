@@ -1,6 +1,7 @@
 import { effectiveThresholdSeconds } from "../shared/config";
 import type { CurrentTab, LighthouseEventData, SessionReceipt } from "../shared/types";
 import { flush, planHeartbeat, submit } from "./aw-client";
+import { syncTab } from "./brain-sync";
 import { LOW_SCORE_LIMIT } from "./constants";
 import { classify, probeOllama } from "./llm-client";
 import { evaluateNudge, hideNudge, trackLowScore } from "./nudge";
@@ -126,12 +127,22 @@ interface ActiveTab {
   title: string;
   windowId: number;
   groupId: number;
+  audible: boolean;
+  incognito: boolean;
 }
 
 async function queryActive(): Promise<ActiveTab | null> {
   const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
   if (!tab || tab.id === undefined || !tab.url) return null;
-  return { id: tab.id, url: tab.url, title: tab.title ?? "", windowId: tab.windowId, groupId: tab.groupId ?? -1 };
+  return {
+    id: tab.id,
+    url: tab.url,
+    title: tab.title ?? "",
+    windowId: tab.windowId,
+    groupId: tab.groupId ?? -1,
+    audible: !!tab.audible,
+    incognito: !!tab.incognito,
+  };
 }
 
 async function applyTab(tab: ActiveTab, force: boolean): Promise<void> {
@@ -143,14 +154,22 @@ async function applyTab(tab: ActiveTab, force: boolean): Promise<void> {
     prev && prev.tabId === tab.id && stripHashUrl(prev.url) === stripHashUrl(tab.url) && prev.title === tab.title;
   if (unchanged && !force) return;
 
-  const settings = await getSettings();
-  const outcome = await classify(
-    { goal: snap.currentGoal, url: tab.url, title: tab.title },
-    settings,
-    { aiAvailable: snap.aiStatus === "online" },
-  );
-  await noteAiResult(outcome.aiOk);
-  const r = outcome.result;
+  // Sheru's brain judges against the onboarding goals when it is running; otherwise classify locally.
+  const reply = await syncTab(tab, !isInactive());
+  let r: { score: number; category: string; reasoning: string; source: "llm" | "heuristic" };
+  if (reply?.verdict) {
+    const v = reply.verdict;
+    r = { score: v.score, category: v.category, reasoning: v.reason, source: v.source === "llm" ? "llm" : "heuristic" };
+  } else {
+    const settings = await getSettings();
+    const outcome = await classify(
+      { goal: snap.currentGoal, url: tab.url, title: tab.title },
+      settings,
+      { aiAvailable: snap.aiStatus === "online" },
+    );
+    await noteAiResult(outcome.aiOk);
+    r = outcome.result;
+  }
   const now = Date.now();
   const next: CurrentTab = {
     tabId: tab.id,
@@ -206,10 +225,22 @@ export function refreshActiveTab(opts: { force?: boolean } = {}): Promise<void> 
   return rt.refreshing;
 }
 
+/** Keep Sheru's brain up to date with the active tab (also delivers its alerts and commands). */
+async function pingBrain(cur: CurrentTab | null, focused: boolean): Promise<void> {
+  if (!cur) return;
+  try {
+    const t = await chrome.tabs.get(cur.tabId);
+    await syncTab({ id: cur.tabId, url: t.url ?? cur.url, title: t.title ?? cur.title, audible: !!t.audible, incognito: !!t.incognito }, focused);
+  } catch {
+    /* tab closed between events */
+  }
+}
+
 /** Periodic work: session accounting, heartbeat, model probe, AW flush, nudge evaluation. */
 export async function tick(now = Date.now()): Promise<void> {
   if (isInactive()) return;
   const snap = await getSnapshot();
+  await pingBrain(snap.currentTab, true);
   const st = await loadState();
   if (st.session) {
     await mutate((s) => {
@@ -270,6 +301,7 @@ export async function setUnfocused(unfocused: boolean, now = Date.now()): Promis
     if (rt.lowTimer) clearTimeout(rt.lowTimer);
     rt.lowTimer = null;
     await persistFlags();
+    void pingBrain((await getSnapshot()).currentTab, false); // tell the brain the browser lost focus
     return;
   }
   rt.unfocused = false;

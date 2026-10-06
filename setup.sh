@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# One-time (idempotent) setup: dependencies, Python venv, Ollama model, extension build.
+# One-time (idempotent) setup: dependencies, Python venv, Ollama + Sheru models, extension build, desktop buddy.
 set -euo pipefail
 . "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/scripts/lib.sh"
 
@@ -135,6 +135,12 @@ else
     ok "Pulled $MODEL"
     add "Ollama model: $MODEL (pulled)"
   fi
+  if ensure_sheru_model "$MODEL"; then
+    ok "Sheru persona model ready (ollama model '$SHERU_MODEL', built on $MODEL)"
+    add "Sheru model: $SHERU_MODEL (from ollama/Modelfile.sheru)"
+  else
+    warn "Could not build the '$SHERU_MODEL' model; Sheru will use $MODEL with the same persona prompt."
+  fi
   cleanup_tmp; TMP_OLLAMA_PID=""
 fi
 
@@ -149,5 +155,21 @@ else
 fi
 ok "Extension built: $EXT_DIR/dist (model: $EXT_MODEL)"
 add "Extension build: extension/dist (model: $EXT_MODEL)"
+
+# ---- Sheru desktop buddy (macOS) ------------------------------------------------
+if [ "$(uname -s)" = "Darwin" ]; then
+  if have swiftc; then
+    info "Building Sheru's desktop app (Lighthouse Buddy.app)"
+    if "$BUDDY_DIR/build.sh"; then
+      add "Desktop buddy: buddy/build/Lighthouse Buddy.app"
+    else
+      warn "Could not build the desktop buddy; Lighthouse still works in the browser."
+      add "Desktop buddy: build FAILED (see output above)"
+    fi
+  else
+    warn "swiftc not found: install the Xcode Command Line Tools (xcode-select --install) to get Sheru on your desktop."
+    add "Desktop buddy: skipped (no swiftc)"
+  fi
+fi
 
 printf '\n%sSetup complete%s%s\n\nNext: ./start.sh\n' "$C_BOLD" "$C_RESET" "$SUMMARY"

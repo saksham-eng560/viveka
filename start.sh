@@ -1,16 +1,23 @@
 #!/usr/bin/env bash
-# Start Ollama (if needed), ActivityWatch (if installed), the Pulse backend and the dashboard.
+# Start everything for Lighthouse: Ollama (+ the "sheru" persona model), ActivityWatch (if installed),
+# the backend (Sheru's brain), the dashboard, Sheru on your desktop (macOS) and a browser window
+# with the Lighthouse extension already installed.
 set -euo pipefail
 . "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/scripts/lib.sh"
 
 DETACH=0; OPEN=1; FIX_OLLAMA=0; YES=0; AW_WATCHERS=auto   # auto | yes | no
+BUDDY=1; BROWSER=1; FRESH=0
 usage() {
   cat <<USAGE
-Usage: ./start.sh [--detach|-d] [--no-open] [--fix-ollama [-y|--yes]]
-                   [--aw-watchers|--no-aw-watchers] [-h|--help]
+Usage: ./start.sh [--detach|-d] [--no-open] [--no-buddy] [--no-browser] [--fresh]
+                   [--fix-ollama [-y|--yes]] [--aw-watchers|--no-aw-watchers] [-h|--help]
 
   -d, --detach    start services and return; stop later with ./stop.sh
-  --no-open       do not open the dashboard in a browser
+  --no-open       do not open any browser window
+  --no-buddy      do not start Sheru on the desktop (macOS)
+  --no-browser    do not open the Lighthouse browser window with the extension installed
+                  (the dashboard opens in your default browser instead)
+  --fresh         forget the saved profile so onboarding starts again (activity history is kept)
   --fix-ollama    (macOS) set OLLAMA_ORIGINS persistently (launchctl setenv), quit the
                   Ollama app, stop running "ollama serve" processes, relaunch Ollama.
                   Asks [y/N] first. Undo: launchctl unsetenv OLLAMA_ORIGINS
@@ -34,6 +41,7 @@ refused/skipped when OLLAMA_URL points at another host.
 
 Default: run in the foreground, tail logs, Ctrl+C stops everything started.
 Env (export in your shell; not read from .env files by this script):
+  LIGHTHOUSE_BROWSER  chrome | brave | edge | chromium | /path/to/browser (default: first installed)
   LLM_MODEL        backend model; only passed to the backend if set
                    (otherwise pulse-backend/.env or the built-in $DEFAULT_MODEL applies)
   BACKEND_PORT (default 8000), DASHBOARD_PORT (default 3000)
@@ -49,6 +57,7 @@ for a in "$@"; do
     -d|--detach) DETACH=1 ;; --no-open) OPEN=0 ;; --fix-ollama) FIX_OLLAMA=1 ;;
     -y|--yes) YES=1 ;;
     --aw-watchers) AW_WATCHERS=yes ;; --no-aw-watchers) AW_WATCHERS=no ;;
+    --no-buddy) BUDDY=0 ;; --no-browser) BROWSER=0 ;; --fresh) FRESH=1 ;;
     -h|--help) usage; exit 0 ;;
     *) usage >&2; die "Unknown option: $a" ;;
   esac
@@ -75,6 +84,20 @@ fi
 require_cmd curl
 require_cmd lsof
 mkdir -p "$LOG_DIR"
+
+# A stale extension build (sources newer than dist) is rebuilt, so the browser never loads old code.
+ext_stale() {
+  [ -f "$EXT_DIR/dist/manifest.json" ] || return 0
+  [ -n "$(find "$EXT_DIR/src" "$EXT_DIR/vite.config.ts" "$EXT_DIR/package.json" "$BUDDY_DIR/web/sheru.svg" \
+          -type f -newer "$EXT_DIR/dist/manifest.json" -print 2>/dev/null | head -n 1)" ]
+}
+if ext_stale; then
+  info "Extension sources changed; rebuilding extension/dist"
+  if [ -n "${LLM_MODEL:-}" ]; then (cd "$EXT_DIR" && VITE_LLM_MODEL="$LLM_MODEL" npm run build >"$LOG_DIR/extension-build.log" 2>&1)
+  else (cd "$EXT_DIR" && npm run build >"$LOG_DIR/extension-build.log" 2>&1); fi \
+    || { tail -n 20 "$LOG_DIR/extension-build.log" >&2; die "Extension build failed (see .run/logs/extension-build.log)"; }
+  ok "Extension rebuilt"
+fi
 
 # ---- ollama ---------------------------------------------------------------------
 cors_status() { # echoes HTTP status of the extension-origin preflight
@@ -356,6 +379,59 @@ fi
 wait_for_http "http://127.0.0.1:$DASHBOARD_PORT" 30 || fail_start dashboard "Dashboard did not come up within 30s"
 ok "Dashboard up"
 
+# ---- fresh start (onboarding again) ------------------------------------------------
+if [ "$FRESH" -eq 1 ]; then
+  if curl -fsS -X DELETE --max-time 5 "http://127.0.0.1:$BACKEND_PORT/api/profile" >/dev/null 2>&1; then
+    ok "Profile cleared: onboarding will start in the dashboard"
+  else warn "Could not clear the profile (backend did not answer)"; fi
+fi
+
+# ---- Sheru: persona model, desktop buddy, browser with the extension --------------------
+SHERU_MODEL_STATE="not built (Ollama not reachable)"
+if ollama_is_local && http_ok "$OLLAMA_BASE/api/tags"; then
+  if ensure_sheru_model "${LLM_MODEL:-$DEFAULT_MODEL}"; then SHERU_MODEL_STATE="ready (ollama model '$SHERU_MODEL')"
+  else SHERU_MODEL_STATE="not built (is ${LLM_MODEL:-$DEFAULT_MODEL} pulled? Sheru falls back to it)"; fi
+fi
+
+BUDDY_STATE="disabled (--no-buddy)"
+if [ "$BUDDY" -eq 1 ] && [ "$(uname -s)" != "Darwin" ]; then BUDDY_STATE="macOS only (nudges appear in your browser tabs instead)"
+elif [ "$BUDDY" -eq 1 ]; then
+  if service_running buddy; then BUDDY_STATE="on your desktop (already running)"
+  elif pgrep -f "Contents/MacOS/LighthouseBuddy" >/dev/null 2>&1; then BUDDY_STATE="already running (started outside start.sh)"
+  elif ! have swiftc; then BUDDY_STATE="needs the Xcode Command Line Tools: xcode-select --install"
+  elif "$BUDDY_DIR/build.sh" >"$LOG_DIR/buddy-build.log" 2>&1; then
+    info "Starting Sheru on your desktop"
+    start_bg buddy "$ROOT_DIR" "$BUDDY_BIN" --port "$BACKEND_PORT" --dashboard "http://localhost:$DASHBOARD_PORT"
+    started buddy
+    sleep 2
+    if service_running buddy; then BUDDY_STATE="on your desktop (top-left corner; 🦁 in the menu bar)"
+    else BUDDY_STATE="exited early (see .run/logs/buddy.log)"; warn "Sheru's desktop app exited; see .run/logs/buddy.log"; fi
+  else
+    BUDDY_STATE="build failed (see .run/logs/buddy-build.log)"
+    warn "Could not build Sheru's desktop app; see .run/logs/buddy-build.log"
+  fi
+fi
+
+BROWSER_STATE="not opened"
+if [ "$OPEN" -eq 0 ]; then BROWSER_STATE="not opened (--no-open)"
+elif [ "$BROWSER" -eq 0 ]; then BROWSER_STATE="disabled (--no-browser)"
+elif service_running browser; then BROWSER_STATE="already open (Lighthouse window)"
+else
+  info "Opening a browser window with the Lighthouse extension installed"
+  start_bg browser "$ROOT_DIR" node "$ROOT_DIR/scripts/launch-browser.mjs" --ext "$EXT_DIR/dist" \
+    --profile "$RUN_DIR/browser-profile" --url "http://localhost:$DASHBOARD_PORT"
+  started browser
+  i=0
+  while [ "$i" -lt 20 ] && service_running browser && ! grep -q "ready;" "$LOG_DIR/browser.log" 2>/dev/null; do sleep 1; i=$((i + 1)); done
+  if grep -q "extension installed" "$LOG_DIR/browser.log" 2>/dev/null; then
+    BROWSER_STATE="open, extension installed ($(sed -n 's/.*starting \([a-z]*\):.*/\1/p' "$LOG_DIR/browser.log" | head -n 1))"
+  elif service_running browser; then BROWSER_STATE="open, but the extension needs a manual install (see below)"
+  else
+    BROWSER_STATE="could not start (see .run/logs/browser.log)"
+    warn "Could not open the Lighthouse browser window:"; tail -n 5 "$LOG_DIR/browser.log" >&2 || true
+  fi
+fi
+
 # ---- summary --------------------------------------------------------------------
 HEALTH="$(curl -fsS --max-time 5 "http://127.0.0.1:$BACKEND_PORT/api/health" 2>/dev/null || true)"
 HEALTH_LINE="$("$VENV_DIR/bin/python" -c '
@@ -370,7 +446,10 @@ bar="+--------------------------------------------------------------------------
 printf '\n%s%s%s\n' "$C_BOLD" "$bar" "$C_RESET"
 line "${C_BOLD}Lighthouse is running${C_RESET}"
 line ""
-line "Dashboard : http://localhost:$DASHBOARD_PORT"
+line "Sheru     : $BUDDY_STATE"
+line "Browser   : $BROWSER_STATE"
+line "Dashboard : http://localhost:$DASHBOARD_PORT   (onboarding opens there on first run)"
+line "Sheru model: $SHERU_MODEL_STATE"
 line "API docs  : http://localhost:$BACKEND_PORT/docs"
 line "Health    : $HEALTH_LINE"
 line "Ollama    : $OLLAMA_STATE; extension CORS: $CORS_STATE"
@@ -378,17 +457,18 @@ line "ActivityWatch: $AW_STATE$([ "$AW_STATE" = "not running" ] && echo ' (backe
 line "AW watchers : $AW_WATCHER_STATE"
 line "  (macOS asks for Accessibility / Input Monitoring permission on first run)"
 line ""
-line "Load the extension:"
-line "  1. Open chrome://extensions and enable Developer mode"
-line "  2. Load unpacked -> $EXT_DIR/dist"
-line "     (extension ID: $EXTENSION_ID)"
-line "  3. Click the Lighthouse icon -> Open side panel; toggle Demo mode"
+case "$BROWSER_STATE" in
+  open,\ extension\ installed*) line "Extension : installed in the Lighthouse browser window (ID $EXTENSION_ID)" ;;
+  *) line "Extension : to use your own browser: chrome://extensions -> Developer mode -> Load unpacked"
+     line "            -> $EXT_DIR/dist   (pick the dist folder, not extension/)" ;;
+esac
+line "Showcase  : pick the 'Demo' pace in onboarding (or the dashboard) for fast nudges"
 line ""
-line "Logs: $LOG_DIR/{backend,dashboard,ollama,aw-server,aw-watcher-window,aw-watcher-afk}.log"
+line "Logs: $LOG_DIR/{backend,dashboard,buddy,browser,ollama,aw-server,aw-watcher-window,aw-watcher-afk}.log"
 if [ "$DETACH" -eq 1 ]; then line "Stop with: ./stop.sh"; else line "Press Ctrl+C to stop everything"; fi
 printf '%s%s%s\n\n' "$C_BOLD" "$bar" "$C_RESET"
 
-if [ "$OPEN" -eq 1 ]; then
+if [ "$OPEN" -eq 1 ] && ! service_running browser; then
   case "$(uname -s)" in
     Darwin) open "http://localhost:$DASHBOARD_PORT" >/dev/null 2>&1 || true ;;
     *) have xdg-open && { xdg-open "http://localhost:$DASHBOARD_PORT" >/dev/null 2>&1 || true; } ;;
@@ -410,9 +490,10 @@ on_exit() {
 }
 trap 'exit 130' INT
 trap 'exit 143' TERM
+trap 'exit 129' HUP   # Terminal window closed (e.g. Lighthouse.command): still clean up
 trap on_exit EXIT
-touch "$LOG_DIR/backend.log" "$LOG_DIR/dashboard.log" "$LOG_DIR/ollama.log"
-tail -n 0 -F "$LOG_DIR/backend.log" "$LOG_DIR/dashboard.log" "$LOG_DIR/ollama.log" 2>/dev/null &
+touch "$LOG_DIR/backend.log" "$LOG_DIR/dashboard.log" "$LOG_DIR/ollama.log" "$LOG_DIR/buddy.log" "$LOG_DIR/browser.log"
+tail -n 0 -F "$LOG_DIR/backend.log" "$LOG_DIR/dashboard.log" "$LOG_DIR/ollama.log" "$LOG_DIR/buddy.log" "$LOG_DIR/browser.log" 2>/dev/null &
 TAIL_PID=$!
 disown "$TAIL_PID" 2>/dev/null || true
 while true; do

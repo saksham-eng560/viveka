@@ -31,6 +31,15 @@ export interface AwEvent {
   data: LighthouseEventData;
 }
 
+export interface BrainAlertPayload {
+  id: number;
+  kind: string;
+  title: string;
+  text: string;
+  level: number;
+  actions: { id: string; label: string }[];
+}
+
 export interface NudgePayload {
   score: number;
   category: string;
@@ -39,6 +48,19 @@ export interface NudgePayload {
   url: string;
   hostname: string;
   minutesLeft: number | null;
+  /** Set when the nudge comes from Sheru's brain (backend coach) instead of the standalone engine. */
+  brain?: BrainAlertPayload;
+}
+
+/** What Sheru's brain (the backend coach) last said about the active tab. */
+export interface BrainStatus {
+  online: boolean;
+  buddyOnline: boolean;
+  firstName: string | null;
+  goals: string[];
+  verdict: "focus" | "neutral" | "distraction" | null;
+  label: string | null;
+  checkedAt: number;
 }
 
 export interface Settings {
@@ -97,6 +119,8 @@ export interface AppStateSnapshot {
   settings: Settings;
   /** Additive (not in C5): last finished session receipt so the panel can re-show it. */
   lastReceipt: SessionReceipt | null;
+  /** Additive: Sheru's brain status (null until the first report). */
+  brain: BrainStatus | null;
 }
 
 export interface ContextResetTab {

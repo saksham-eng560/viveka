@@ -26,7 +26,7 @@ export type MsgType = (typeof MSG)[keyof typeof MSG];
 
 export type Reply<T> = { ok: true; data: T } | { ok: false; error: string };
 
-export type NudgeActionKind = "dismiss" | "back_to_work";
+export type NudgeActionKind = "dismiss" | "back_to_work" | "snooze" | "its_work";
 
 /** Messages handled by the background service worker. */
 export type BackgroundMessage =

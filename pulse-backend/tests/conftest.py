@@ -25,10 +25,15 @@ UTC = dt.timezone.utc
 
 
 @pytest.fixture(autouse=True)
-def env(monkeypatch: pytest.MonkeyPatch) -> Iterator[Callable[..., None]]:
+def env(monkeypatch: pytest.MonkeyPatch, tmp_path: Any) -> Iterator[Callable[..., None]]:
+    import coach
+
     for k, v in ENV_DEFAULTS.items():
         monkeypatch.setenv(k, v)
+    monkeypatch.setenv("LIGHTHOUSE_DATA_DIR", str(tmp_path / "data"))
+    monkeypatch.setenv("LLM_CLASSIFY", "off")
     config.get_settings.cache_clear()
+    coach.reset_coach()
 
     def set_env(**kwargs: str) -> None:
         for k, v in kwargs.items():
@@ -37,6 +42,7 @@ def env(monkeypatch: pytest.MonkeyPatch) -> Iterator[Callable[..., None]]:
 
     yield set_env
     config.get_settings.cache_clear()
+    coach.reset_coach()
 
 
 @pytest.fixture

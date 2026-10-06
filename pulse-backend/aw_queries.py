@@ -21,6 +21,7 @@ from models import (
     TimelineEvent,
     UpstreamError,
 )
+from activity_store import ActivityStore
 from sample_data import sample_events
 
 logger = logging.getLogger("pulse.aw")
@@ -166,11 +167,32 @@ async def fetch_aw_events(settings: Settings, start: dt.datetime, end: dt.dateti
     return [e for e in events if start <= e.timestamp < end]
 
 
+def local_events(settings: Settings, start: dt.datetime, end: dt.datetime) -> list[Event]:
+    """Whole-computer activity logged by Sheru's coach (desktop app + extension)."""
+    store = ActivityStore(settings.data_dir)
+    if not store.path.exists():
+        return []
+    try:
+        return store.events_between(start, end)
+    except Exception as exc:  # a corrupt/locked db must not take the dashboard down
+        logger.warning("could not read local activity: %s", exc)
+        return []
+    finally:
+        store.close()
+
+
 async def fetch_events(settings: Settings, date: dt.date, tz: Optional[str]) -> tuple[list[Event], Source]:
-    """Resolve events for a day according to DATA_SOURCE (aw / sample / auto)."""
+    """Resolve events for a day according to DATA_SOURCE (aw / sample / local / auto).
+
+    auto: Sheru's local log if it has anything for the day, else ActivityWatch, else sample data.
+    """
     start, end = day_window(date, tz)
     if settings.data_source == "sample":
         return sample_events(date, tz), "sample"
+    if settings.data_source in ("auto", "local"):
+        events = local_events(settings, start, end)
+        if events or settings.data_source == "local":
+            return events, "local"
     try:
         return await fetch_aw_events(settings, start, end), "aw"
     except AWUnreachable:

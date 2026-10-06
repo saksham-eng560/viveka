@@ -1,19 +1,27 @@
 """Lighthouse Pulse backend. Run: uvicorn main:app --port 8000"""
 from __future__ import annotations
 
+import asyncio
 import datetime as dt
-from typing import Any, Literal, Optional, cast
+from contextlib import asynccontextmanager, suppress
+from pathlib import Path
+from typing import Any, AsyncIterator, Literal, Optional, cast
 
 import httpx
 from fastapi import FastAPI, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
+from pydantic import Field
 
 from aw_queries import compute_summary, fetch_events, to_timeline
+from catalog import catalog_payload
+from coach import BrowserSample, DesktopSample, get_coach
 from config import Settings, get_settings
 from llm_service import generate_standup
 from models import (
     AwHealth,
+    CamelModel,
     DailySummaryResponse,
     HealthResponse,
     OllamaHealth,
@@ -22,9 +30,27 @@ from models import (
     StandupRequest,
     TimelineResponse,
 )
+from profile_store import ProfileIn
+from vivekananda import WisdomPicker
 
-app = FastAPI(title="Lighthouse Pulse", version="1.0.0")
+BUDDY_WEB = Path(__file__).resolve().parent.parent / "buddy" / "web"
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+    task = asyncio.create_task(get_coach().run())
+    try:
+        yield
+    finally:
+        task.cancel()
+        with suppress(asyncio.CancelledError):
+            await task
+
+
+app = FastAPI(title="Lighthouse Pulse", version="2.0.0", lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+if BUDDY_WEB.is_dir():
+    app.mount("/buddy", StaticFiles(directory=BUDDY_WEB, html=True), name="buddy")
 
 
 @app.exception_handler(PulseError)
@@ -92,3 +118,109 @@ async def health() -> HealthResponse:
             model_available=_model_available(tags, s.llm_model),
         ),
     )
+
+
+# ------------------------------------------------------------------- Sheru / coach
+class DesktopSampleIn(CamelModel):
+    app: str = Field(default="", max_length=200)
+    bundle_id: str = Field(default="", max_length=200)
+    title: str = Field(default="", max_length=500)
+    key_idle: float = Field(default=0.0, ge=0)
+    input_idle: float = Field(default=0.0, ge=0)
+    locked: bool = False
+    ax_trusted: bool = False
+
+
+class BrowserSampleIn(CamelModel):
+    url: str = Field(default="", max_length=2000)
+    title: str = Field(default="", max_length=500)
+    audible: bool = False
+    focused: bool = True
+    incognito: bool = False
+    tab_id: int = -1
+    browser: str = Field(default="Chrome", max_length=40)
+
+
+class ActionIn(CamelModel):
+    action: str = Field(max_length=40)
+    message_id: Optional[int] = None
+    minutes: Optional[float] = Field(default=None, gt=0, le=240)
+
+
+class ChatIn(CamelModel):
+    text: str = Field(min_length=1, max_length=400)
+
+
+@app.get("/", include_in_schema=False)
+async def root() -> RedirectResponse:
+    return RedirectResponse("/docs")
+
+
+@app.get("/api/catalog")
+async def catalog() -> dict[str, Any]:
+    return catalog_payload()
+
+
+@app.get("/api/profile")
+async def get_profile() -> dict[str, Any]:
+    p = get_coach().profile
+    return {"exists": p is not None, "profile": p.model_dump(by_alias=True) if p else None}
+
+
+@app.put("/api/profile")
+async def put_profile(body: ProfileIn) -> dict[str, Any]:
+    coach = get_coach()
+    saved = coach.profiles.save(body)
+    coach.on_profile_saved()
+    return {"exists": True, "profile": saved.model_dump(by_alias=True)}
+
+
+@app.delete("/api/profile")
+async def delete_profile() -> dict[str, Any]:
+    coach = get_coach()
+    coach.profiles.reset()
+    coach.reset_session()
+    coach.greet()
+    return {"exists": False, "profile": None}
+
+
+@app.post("/api/desktop/sample")
+async def desktop_sample(body: DesktopSampleIn) -> dict[str, Any]:
+    coach = get_coach()
+    coach.ingest_desktop(DesktopSample(**body.model_dump()))
+    return {"ok": True}
+
+
+@app.post("/api/browser/sample")
+async def browser_sample(body: BrowserSampleIn) -> dict[str, Any]:
+    return get_coach().ingest_browser(BrowserSample(**body.model_dump()))
+
+
+@app.get("/api/buddy/state")
+async def buddy_state(since: int = Query(0, ge=0)) -> dict[str, Any]:
+    return get_coach().state(since)
+
+
+@app.post("/api/buddy/action")
+async def buddy_action(body: ActionIn) -> dict[str, Any]:
+    return get_coach().action(body.action, body.message_id, body.minutes)
+
+
+@app.post("/api/buddy/chat")
+async def buddy_chat(body: ChatIn) -> dict[str, Any]:
+    return await get_coach().chat(body.text)
+
+
+_picker = WisdomPicker()
+
+
+@app.get("/api/wisdom")
+async def wisdom(kind: Literal["quote", "fact", "any"] = "any") -> dict[str, Any]:
+    w = _picker.quote() if kind == "quote" else _picker.fact() if kind == "fact" else _picker.any()
+    return {"id": w.id, "kind": w.kind, "text": w.text, "source": w.source}
+
+
+@app.get("/api/today")
+async def today() -> dict[str, Any]:
+    coach = get_coach()
+    return {**coach.today(), "state": coach.state(since=10**9)}
