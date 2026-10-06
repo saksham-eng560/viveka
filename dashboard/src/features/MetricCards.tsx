@@ -5,12 +5,12 @@ import { formatDuration, formatPercent } from "../lib/format";
 import { cn } from "../lib/utils";
 import type { DailySummaryResponse } from "../lib/types";
 
-type Tone = "indigo" | "rose" | "zinc";
+type Tone = "productive" | "distraction" | "neutral";
 
 const toneClasses: Record<Tone, { value: string; icon: string }> = {
-  indigo: { value: "text-indigo-600 dark:text-indigo-400", icon: "bg-indigo-50 text-indigo-600 dark:bg-indigo-500/15 dark:text-indigo-300" },
-  rose: { value: "text-rose-600 dark:text-rose-400", icon: "bg-rose-50 text-rose-600 dark:bg-rose-500/15 dark:text-rose-300" },
-  zinc: { value: "text-zinc-900 dark:text-zinc-50", icon: "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300" },
+  productive: { value: "text-accent", icon: "bg-tint-saffron text-ink" },
+  distraction: { value: "text-heading", icon: "bg-tint-maroon text-heading" },
+  neutral: { value: "text-ink", icon: "bg-bg text-muted" },
 };
 
 interface MetricProps {
@@ -25,13 +25,13 @@ function Metric({ label, value, hint, tone, icon }: MetricProps) {
   return (
     <Card className="p-5" data-tone={tone} data-testid={`metric-${label}`}>
       <div className="flex items-start justify-between gap-3">
-        <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">{label}</p>
+        <p className="text-sm font-medium text-muted">{label}</p>
         <span className={cn("flex h-8 w-8 items-center justify-center rounded-lg", toneClasses[tone].icon)} aria-hidden="true">
           {icon}
         </span>
       </div>
-      <p className={cn("mt-3 text-3xl font-semibold tracking-tight tabular-nums", toneClasses[tone].value)}>{value}</p>
-      <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{hint}</p>
+      <p className={cn("mt-3 font-serif text-[30px] leading-9 font-semibold tabular-nums", toneClasses[tone].value)}>{value}</p>
+      <p className="mt-1 text-xs text-muted">{hint}</p>
     </Card>
   );
 }
@@ -94,28 +94,28 @@ export function MetricCards({ summary, loading }: { summary: DailySummaryRespons
         label="Active time"
         value={formatDuration(summary.activeSeconds)}
         hint={`${formatPercent(summary.activeSeconds, total)} of tracked time`}
-        tone="indigo"
+        tone="productive"
         icon={icons.clock}
       />
       <Metric
         label="Distraction time"
         value={formatDuration(summary.distractionSeconds)}
         hint={`${formatPercent(summary.distractionSeconds, total)} of tracked time`}
-        tone="rose"
+        tone="distraction"
         icon={icons.alert}
       />
       <Metric
         label="Avg focus score"
         value={summary.averageFocusScore.toFixed(1)}
         hint="Duration-weighted, out of 100"
-        tone="zinc"
+        tone="neutral"
         icon={icons.target}
       />
       <Metric
         label="Context switches"
         value={String(summary.contextSwitches)}
         hint="Changes between sites"
-        tone="zinc"
+        tone="neutral"
         icon={icons.shuffle}
       />
     </div>

@@ -1,16 +1,62 @@
 /* Content-script styles live inside a Shadow DOM, so only the theme tokens and the
-   utilities actually used by Overlay.tsx are emitted (no preflight, no page leakage). */
-@layer theme, utilities;
+   utilities actually used by Overlay.tsx are emitted (no preflight, no page leakage).
+   The nudge is light-only and uses the system serif stack: no web fonts are loaded into third-party pages. */
+@layer theme, base, utilities;
 @import "tailwindcss/theme.css" layer(theme);
 @import "tailwindcss/utilities.css" layer(utilities) source(none);
 @source "./Overlay.tsx";
+@source "../ui/Controls.tsx";
+
+@theme inline {
+  --font-serif: var(--lh-font-serif);
+  --color-bg: var(--lh-bg);
+  --color-surface: var(--lh-surface);
+  --color-ink: var(--lh-ink);
+  --color-muted: var(--lh-muted);
+  --color-heading: var(--lh-heading);
+  --color-accent: var(--lh-accent);
+  --color-line: var(--lh-border);
+  --color-line-strong: var(--lh-border-strong);
+  --color-primary: var(--lh-primary-bg);
+  --color-primary-fg: var(--lh-primary-fg);
+  --color-tint-saffron: var(--lh-tint-saffron);
+  --color-tint-maroon: var(--lh-tint-maroon);
+  --color-productive: var(--lh-productive);
+  --color-distraction: var(--lh-distraction);
+  --color-neutral-tone: var(--lh-neutral);
+  --color-ok: var(--lh-ok);
+}
 
 :host {
   all: initial;
   font-family: ui-sans-serif, -apple-system, "SF Pro Text", "Segoe UI", Inter, Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-size: 14px;
+  line-height: 20px;
+  color-scheme: light;
+
+  --lh-bg: #FBF3E4;
+  --lh-surface: #F3E6CC;
+  --lh-ink: #2B2420;
+  --lh-muted: #6B5B4D;
+  --lh-heading: #7A2E1D;
+  --lh-accent: #B45309;
+  --lh-saffron: #E8730C;
+  --lh-ochre: #B8860B;
+  --lh-border: #E0CFA8;
+  --lh-border-strong: #8A7355;
+  --lh-primary-bg: #7A2E1D;
+  --lh-primary-fg: #FFFFFF;
+  --lh-primary-hover: #5E2113;
+  --lh-focus: #B45309;
+  --lh-tint-saffron: #F8E5C2;
+  --lh-tint-maroon: #EBD3C8;
+  --lh-radius: 10px;
+  --lh-radius-sm: 8px;
+  --lh-shadow-overlay: 0 14px 40px -14px rgba(43, 36, 32, 0.35);
+  --lh-font-serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, "Times New Roman", serif;
 }
 
-/* Tailwind registers its --tw-* defaults with @property, which does not apply inside
+/* Tailwind registers its --tw-* defaults through property-registration rules, which do not apply inside
    shadow roots. Provide the fallbacks explicitly. */
 *, ::before, ::after {
   box-sizing: border-box;
@@ -25,19 +71,29 @@
   --tw-ring-offset-shadow: 0 0 #0000;
 }
 
-button {
-  font: inherit;
-  cursor: pointer;
-  border: 0;
-  margin: 0;
-  appearance: none;
+/* Resets sit in a layer below utilities so utility classes (margins, borders) can override them. */
+@layer base {
+  button {
+    font: inherit;
+    cursor: pointer;
+    border: 0;
+    margin: 0;
+    appearance: none;
+  }
+
+  p {
+    margin: 0;
+  }
 }
 
 button:focus-visible {
-  outline: 2px solid #6366f1;
+  outline: 2px solid var(--lh-focus);
   outline-offset: 2px;
 }
 
-p {
-  margin: 0;
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

@@ -3,8 +3,10 @@ import ReactMarkdown from "react-markdown";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
+import { QuoteBlock } from "../components/ui/quote-block";
 import { Skeleton } from "../components/ui/skeleton";
 import { apiErrorMessage, generateStandup } from "../lib/api";
+import { quoteFor } from "../lib/quotes";
 import type { StandupNotesResponse } from "../lib/types";
 import { Typewriter } from "./Typewriter";
 
@@ -65,8 +67,8 @@ export function StandupGenerator({ date }: { date: string }) {
         </div>
         <div className="flex items-center gap-2">
           {state.kind === "success" && (
-            <Badge variant={state.result.generatedBy === "llm" ? "indigo" : "amber"}>
-              {state.result.generatedBy === "llm" ? "AI" : "template"}
+            <Badge variant="neutral">
+              {state.result.generatedBy === "llm" ? "Written by your local model" : "Written from a template"}
             </Badge>
           )}
           <Button onClick={run} disabled={loading} aria-busy={loading}>
@@ -76,9 +78,12 @@ export function StandupGenerator({ date }: { date: string }) {
       </CardHeader>
       <CardContent>
         {state.kind === "idle" && (
-          <p className="rounded-xl border border-dashed border-zinc-300 p-6 text-center text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
-            Click <span className="font-medium">Generate Standup</span> to draft notes from your tracked day.
-          </p>
+          <div className="space-y-4 rounded-(--lh-radius) border border-dashed border-line-strong p-6">
+            <QuoteBlock quote={quoteFor("standupIdle")} />
+            <p className="text-sm text-muted">
+              Click <span className="font-medium text-ink">Generate Standup</span> to draft notes from your tracked day.
+            </p>
+          </div>
         )}
         {loading && (
           <div className="space-y-3" role="status" aria-label="Generating standup">
@@ -89,14 +94,14 @@ export function StandupGenerator({ date }: { date: string }) {
           </div>
         )}
         {state.kind === "error" && (
-          <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-200">
+          <div role="alert" className="rounded-(--lh-radius) border border-line bg-tint-maroon p-4 text-sm text-heading">
             <p className="font-medium">Could not generate standup</p>
             <p className="mt-1">{state.message}</p>
           </div>
         )}
         {state.kind === "success" && (
           <div>
-            <div className="markdown rounded-xl bg-zinc-50 p-4 dark:bg-zinc-950/50">
+            <div className="markdown rounded-(--lh-radius) bg-bg p-4">
               <Typewriter
                 key={state.result.markdown}
                 text={state.result.markdown}
@@ -105,7 +110,7 @@ export function StandupGenerator({ date }: { date: string }) {
               />
             </div>
             <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-              <p className="flex items-center gap-1.5 text-xs text-zinc-500 dark:text-zinc-400">
+              <p className="flex items-center gap-1.5 text-xs text-muted">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   <rect x="4" y="11" width="16" height="10" rx="2" />
                   <path d="M8 11V7a4 4 0 018 0v4" />

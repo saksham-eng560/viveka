@@ -3,11 +3,11 @@ import { cn } from "../lib/utils";
 
 function Dot({ ok, label, detail }: { ok: boolean | null; label: string; detail: string }) {
   return (
-    <span className="inline-flex items-center gap-1.5 text-xs text-zinc-600 dark:text-zinc-300" title={detail}>
+    <span className="inline-flex items-center gap-1.5 text-xs text-ink" title={detail}>
       <span
         className={cn(
           "h-2 w-2 rounded-full",
-          ok === null ? "bg-zinc-400" : ok ? "bg-emerald-500" : "bg-rose-500",
+          ok === null ? "bg-neutral-tone" : ok ? "bg-ok" : "bg-distraction",
         )}
         aria-hidden="true"
       />
@@ -31,7 +31,7 @@ export function StatusBar({ health, error }: { health: HealthResponse | null; er
       <Dot ok={health ? health.aw.reachable : null} label="ActivityWatch" detail={health?.aw.url ?? "checking"} />
       <Dot
         ok={health ? health.ollama.reachable && health.ollama.modelAvailable : null}
-        label="Ollama"
+        label="Local model"
         detail={health ? `${health.ollama.url} (${health.ollama.model})` : "checking"}
       />
       <Dot ok={health ? true : null} label={sourceLabel} detail="Configured data source" />

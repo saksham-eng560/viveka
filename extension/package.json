@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Lighthouse Chrome MV3 extension - local AI focus coach",
+  "description": "Lighthouse Chrome MV3 extension - a calm, private focus companion",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

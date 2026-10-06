@@ -18,6 +18,13 @@ describe("manifest", () => {
     );
   });
 
+  it("requests management only as an optional permission", () => {
+    expect(manifest.optional_permissions).toEqual(["management"]);
+    expect(manifest.permissions).not.toContain("management");
+    expect(manifest.permissions).toHaveLength(10);
+    expect(manifest.description).not.toMatch(/\bAI\b/);
+  });
+
   it("limits host permissions to local Ollama and ActivityWatch", () => {
     expect([...manifest.host_permissions].sort()).toEqual(
       [

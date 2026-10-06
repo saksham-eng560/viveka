@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Lighthouse",
   "version": "1.0.0",
-  "description": "Your privacy-first, local AI focus coach. Gentle nudges that keep you on track.",
+  "description": "A calm, private focus companion. Gentle reminders that bring you back to your goal. Everything stays on your device.",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAoG8N1OhnIPR0TxfJswQnHTbW+/L/uRbfHaciSiCIYeFw7x1aF6pqbjGggH4AVuamAKixWbyMLY/u1pOl6WdhhQSHuJQRG3niG11D+T6re8SSnTcFpxp+gjMG02JdbN+N9uVshw4ad5LfY6r4x9X30qiGVNr+59Q2y4jmEPJ6hZvrrE8v23swWdjQjvJNwp2mhqi+rx3whxWpf2dtbM622JoSzsThKjZ81ghD9U09QU7tBDLH/Ju8TVSaRxpAmWdT5pK3ruxYj91FVgCqjuJye8/pcnQdcX/qEtzWajdd1mCKeFD8jcl66zsAQmZcfmpl3eqgTsXsEP9p88KbD49WOwIDAQAB",
   "minimum_chrome_version": "116",
   "icons": {
@@ -22,6 +22,7 @@
     "tabGroups",
     "idle"
   ],
+  "optional_permissions": ["management"],
   "host_permissions": [
     "http://localhost:11434/*",
     "http://127.0.0.1:11434/*",

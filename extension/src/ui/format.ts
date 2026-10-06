@@ -22,7 +22,7 @@ export function toneFor(score: number): Tone {
 }
 
 export const TONE_COLORS: Record<Tone, { stroke: string; text: string; chip: string }> = {
-  productive: { stroke: "#4f46e5", text: "text-indigo-600", chip: "bg-indigo-50 text-indigo-700" },
-  neutral: { stroke: "#64748b", text: "text-slate-600", chip: "bg-slate-100 text-slate-700" },
-  distraction: { stroke: "#f43f5e", text: "text-rose-600", chip: "bg-rose-50 text-rose-700" },
+  productive: { stroke: "var(--lh-productive)", text: "text-heading", chip: "bg-tint-saffron text-ink" },
+  neutral: { stroke: "var(--lh-neutral)", text: "text-heading", chip: "bg-surface text-ink border border-line" },
+  distraction: { stroke: "var(--lh-distraction)", text: "text-heading", chip: "bg-tint-maroon text-heading" },
 };

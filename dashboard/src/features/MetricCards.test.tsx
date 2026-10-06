@@ -26,12 +26,12 @@ describe("formatDuration", () => {
 });
 
 describe("MetricCards", () => {
-  it("renders formatted values with rose for distraction and indigo for active", () => {
+  it("renders formatted values with distraction and productive tones", () => {
     render(<MetricCards summary={summary} loading={false} />);
-    expect(screen.getByTestId("metric-Active time")).toHaveAttribute("data-tone", "indigo");
+    expect(screen.getByTestId("metric-Active time")).toHaveAttribute("data-tone", "productive");
     expect(screen.getByTestId("metric-Active time")).toHaveTextContent("2h 5m");
     const d = screen.getByTestId("metric-Distraction time");
-    expect(d).toHaveAttribute("data-tone", "rose");
+    expect(d).toHaveAttribute("data-tone", "distraction");
     expect(d).toHaveTextContent("25m");
     expect(screen.getByTestId("metric-Avg focus score")).toHaveTextContent("71.4");
     expect(screen.getByTestId("metric-Context switches")).toHaveTextContent("23");

@@ -44,7 +44,7 @@ describe("nudge decision", () => {
       25,
     );
     expect(p).toMatchObject({ hostname: "reddit.com", minutesLeft: 25, score: 10 });
-    expect(nudgeHeadline(p)).toBe("Taking a break? reddit.com doesn't align with 'Building a React dashboard'. (Score: 10/100).");
+    expect(nudgeHeadline(p)).toBe("reddit.com may be drawing you away from 'Building a React dashboard'.");
   });
   it("pickReturnTab chooses the most recently used relevant tab", () => {
     const pick = pickReturnTab(

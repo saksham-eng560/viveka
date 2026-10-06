@@ -50,7 +50,7 @@ export function Typewriter({ text, speedMs = 10, render, onDone }: Props) {
     <div>
       <div aria-live="polite" aria-busy={!done} data-testid="typewriter-output">
         {render(text.slice(0, count))}
-        {!done && <span className="caret ml-0.5 inline-block h-4 w-0.5 translate-y-0.5 bg-indigo-500" aria-hidden="true" />}
+        {!done && <span className="caret ml-0.5 inline-block h-4 w-0.5 translate-y-0.5 bg-accent" aria-hidden="true" />}
       </div>
       {!done && (
         <div className="mt-3">

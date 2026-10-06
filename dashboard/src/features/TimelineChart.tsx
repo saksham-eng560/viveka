@@ -29,44 +29,39 @@ export function TimelineChart({ events, loading, tz }: Props) {
         {loading ? (
           <Skeleton className="h-64 w-full" />
         ) : data.length === 0 ? (
-          <div className="flex h-64 items-center justify-center rounded-xl border border-dashed border-zinc-300 text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
+          <div className="flex h-64 items-center justify-center rounded-(--lh-radius) border border-dashed border-line-strong text-sm text-muted">
             No activity tracked for this day.
           </div>
         ) : (
           <div className="h-64 w-full" role="img" aria-label={`Focus score timeline with ${data.length} five-minute bins`}>
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: -16 }}>
-                <defs>
-                  <linearGradient id="focusFill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#4f46e5" stopOpacity={0.45} />
-                    <stop offset="100%" stopColor="#4f46e5" stopOpacity={0.02} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#a1a1aa" strokeOpacity={0.25} />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--lh-border)" />
                 <XAxis
                   dataKey="t"
                   type="number"
                   scale="time"
                   domain={["dataMin", "dataMax"]}
                   tickFormatter={(v: number) => formatClock(v, tz)}
-                  tick={{ fontSize: 11, fill: "#71717a" }}
+                  tick={{ fontSize: 11, fill: "var(--lh-muted)" }}
                   tickLine={false}
                   axisLine={false}
                   minTickGap={40}
                 />
-                <YAxis domain={[0, 100]} ticks={[0, 40, 100]} tick={{ fontSize: 11, fill: "#71717a" }} tickLine={false} axisLine={false} />
+                <YAxis domain={[0, 100]} ticks={[0, 40, 100]} tick={{ fontSize: 11, fill: "var(--lh-muted)" }} tickLine={false} axisLine={false} />
                 <Tooltip
                   labelFormatter={(v) => formatClock(Number(v), tz)}
                   formatter={(v) => [typeof v === "number" ? v.toFixed(1) : String(v), "Focus score"]}
-                  contentStyle={{ borderRadius: 12, border: "1px solid #e4e4e7", fontSize: 12 }}
+                  contentStyle={{ borderRadius: 10, border: "1px solid var(--lh-border)", background: "var(--lh-surface)", color: "var(--lh-ink)", fontSize: 12 }}
                 />
-                <ReferenceLine y={40} stroke="#e11d48" strokeDasharray="4 4" label={{ value: "Distraction < 40", position: "insideBottomRight", fill: "#e11d48", fontSize: 11 }} />
+                <ReferenceLine y={40} stroke="var(--lh-distraction)" strokeDasharray="4 4" label={{ value: "Distraction < 40", position: "insideBottomRight", fill: "var(--lh-heading)", fontSize: 11 }} />
                 <Area
                   type="monotone"
                   dataKey="score"
-                  stroke="#4f46e5"
+                  stroke="var(--lh-productive)"
                   strokeWidth={2}
-                  fill="url(#focusFill)"
+                  fill="var(--lh-productive)"
+                  fillOpacity={0.18}
                   connectNulls={false}
                   isAnimationActive={false}
                 />

@@ -16,7 +16,7 @@ export function Gauge({ score, size = 148 }: GaugeProps) {
   return (
     <div className="relative" style={{ width: size, height: size }} role="img" aria-label={`Focus score ${clamped} out of 100`}>
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="-rotate-90">
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#e2e8f0" strokeWidth={stroke} />
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--lh-border)" strokeWidth={stroke} />
         <motion.circle
           cx={size / 2}
           cy={size / 2}
@@ -35,12 +35,12 @@ export function Gauge({ score, size = 148 }: GaugeProps) {
           key={clamped}
           initial={{ opacity: 0.4, y: 4 }}
           animate={{ opacity: 1, y: 0 }}
-          className={`text-4xl font-semibold tabular-nums ${tone.text}`}
+          className={`font-serif text-[30px] font-semibold leading-9 tabular-nums ${tone.text}`}
           data-testid="gauge-score"
         >
           {clamped}
         </motion.span>
-        <span className="text-[11px] font-medium uppercase tracking-wider text-slate-400">focus</span>
+        <span className="text-[11px] font-medium uppercase leading-[15px] tracking-[0.06em] text-muted">focus</span>
       </div>
     </div>
   );

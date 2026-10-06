@@ -1,10 +1,82 @@
 @import "@fontsource-variable/inter";
+@import "@fontsource/lora/500.css";
+@import "@fontsource/lora/600.css";
+@import "@fontsource/lora/400-italic.css";
 @import "tailwindcss";
 
-@theme {
+:root {
+  --lh-bg: #fbf3e4;
+  --lh-surface: #f3e6cc;
+  --lh-ink: #2b2420;
+  --lh-muted: #6b5b4d;
+  --lh-heading: #7a2e1d;
+  --lh-accent: #b45309;
+  --lh-saffron: #e8730c;
+  --lh-ochre: #b8860b;
+  --lh-border: #e0cfa8;
+  --lh-border-strong: #8a7355;
+  --lh-primary-bg: #7a2e1d;
+  --lh-primary-fg: #ffffff;
+  --lh-primary-hover: #5e2113;
+  --lh-focus: #b45309;
+  --lh-productive: #b45309;
+  --lh-distraction: #7a2e1d;
+  --lh-neutral: #8a7355;
+  --lh-tint-saffron: #f8e5c2;
+  --lh-tint-maroon: #ebd3c8;
+  --lh-ok: #5b7f3b;
+  --lh-radius: 10px;
+  --lh-radius-sm: 8px;
+  --lh-shadow: 0 1px 0 rgba(43, 36, 32, 0.04);
+  --lh-font-serif: "Lora", Georgia, "Iowan Old Style", Palatino, serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --lh-bg: #1f1814;
+    --lh-surface: #2a211b;
+    --lh-ink: #f2e6d0;
+    --lh-muted: #b8a58e;
+    --lh-heading: #f2d3a0;
+    --lh-accent: #f59e3f;
+    --lh-ochre: #d4a62a;
+    --lh-border: #4a3a2e;
+    --lh-border-strong: #8f7a62;
+    --lh-primary-bg: #f59e3f;
+    --lh-primary-fg: #1f1814;
+    --lh-primary-hover: #fbb563;
+    --lh-focus: #f59e3f;
+    --lh-productive: #f59e3f;
+    --lh-distraction: #d98a7a;
+    --lh-neutral: #8f7a62;
+    --lh-tint-saffron: #3a2b1a;
+    --lh-tint-maroon: #3b2420;
+    --lh-ok: #9bc27a;
+    --lh-shadow: none;
+  }
+}
+
+@theme inline {
   --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
-  --color-productive: #4f46e5;
-  --color-distraction: #e11d48;
+  --font-serif: var(--lh-font-serif);
+  --color-bg: var(--lh-bg);
+  --color-surface: var(--lh-surface);
+  --color-ink: var(--lh-ink);
+  --color-muted: var(--lh-muted);
+  --color-heading: var(--lh-heading);
+  --color-accent: var(--lh-accent);
+  --color-line: var(--lh-border);
+  --color-line-strong: var(--lh-border-strong);
+  --color-primary: var(--lh-primary-bg);
+  --color-primary-fg: var(--lh-primary-fg);
+  --color-primary-hover: var(--lh-primary-hover);
+  --color-saffron: var(--lh-saffron);
+  --color-tint-saffron: var(--lh-tint-saffron);
+  --color-tint-maroon: var(--lh-tint-maroon);
+  --color-productive: var(--lh-productive);
+  --color-distraction: var(--lh-distraction);
+  --color-neutral-tone: var(--lh-neutral);
+  --color-ok: var(--lh-ok);
 }
 
 @layer base {
@@ -12,39 +84,37 @@
     color-scheme: light dark;
   }
   body {
-    @apply bg-zinc-50 text-zinc-900 antialiased dark:bg-zinc-950 dark:text-zinc-100;
+    @apply bg-bg text-ink antialiased;
     font-feature-settings: "cv11", "ss01";
   }
   :focus-visible {
-    @apply outline-2 outline-offset-2 outline-indigo-500;
+    outline: 2px solid var(--lh-focus);
+    outline-offset: 2px;
   }
 }
 
 .markdown h1,
 .markdown h2,
 .markdown h3 {
-  @apply mt-5 mb-2 text-sm font-semibold tracking-tight text-zinc-900 first:mt-0 dark:text-zinc-50;
+  @apply mt-5 mb-2 font-serif text-[17px] leading-6 font-semibold text-heading first:mt-0;
 }
 .markdown h1 {
-  @apply text-lg;
-}
-.markdown h2 {
-  @apply text-base;
+  @apply text-[22px] leading-7;
 }
 .markdown p {
-  @apply my-2 text-sm leading-relaxed text-zinc-700 dark:text-zinc-300;
+  @apply my-2 text-sm leading-relaxed text-ink;
 }
 .markdown ul {
-  @apply my-2 list-disc space-y-1 pl-5 text-sm text-zinc-700 dark:text-zinc-300;
+  @apply my-2 list-disc space-y-1 pl-5 text-sm text-ink;
 }
 .markdown ol {
-  @apply my-2 list-decimal space-y-1 pl-5 text-sm text-zinc-700 dark:text-zinc-300;
+  @apply my-2 list-decimal space-y-1 pl-5 text-sm text-ink;
 }
 .markdown strong {
-  @apply font-semibold text-zinc-900 dark:text-zinc-100;
+  @apply font-semibold text-ink;
 }
 .markdown code {
-  @apply rounded bg-zinc-100 px-1 py-0.5 text-xs dark:bg-zinc-800;
+  @apply rounded-sm bg-tint-saffron px-1 py-0.5 text-xs text-ink;
 }
 
 @keyframes caret {

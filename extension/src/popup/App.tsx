@@ -1,7 +1,8 @@
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { MSG, send } from "../shared/messages";
-import { LogoMark } from "../ui/Controls";
+import { quoteFor } from "../shared/quotes";
+import { Button, ErrorBlock, LogoMark, QuoteBlock } from "../ui/Controls";
 import { useAppState } from "../ui/hooks";
 
 export function App() {
@@ -39,46 +40,41 @@ export function App() {
     <main className="space-y-3 p-4">
       <header className="flex items-center gap-2.5">
         <LogoMark />
-        <h1 className="m-0 text-base font-semibold text-slate-900">Lighthouse</h1>
+        <h1 className="m-0 font-serif text-xl font-semibold leading-[26px] text-heading">Lighthouse</h1>
       </header>
       {active || started ? (
-        <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="m-0 rounded-xl bg-indigo-50 p-3 text-sm text-indigo-700">
-          Focusing on <b>{state?.currentGoal ?? goal}</b>. You've got this.
-        </motion.p>
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="rounded-[10px] border border-line bg-surface p-3">
+          <p className="m-0 text-sm text-ink">
+            Focusing on <b>{state?.currentGoal ?? goal}</b>.
+          </p>
+          <p className="m-0 mt-0.5 text-xs text-muted">One thing at a time.</p>
+        </motion.div>
       ) : (
         <form
-          className="space-y-2"
+          className="space-y-3"
           onSubmit={(e) => {
             e.preventDefault();
             if (goal.trim()) void start();
           }}
         >
+          <QuoteBlock quote={quoteFor("sessionStart")} size="sm" />
           <input
             autoFocus
             aria-label="Goal"
             value={goal}
             onChange={(e) => setGoal(e.target.value)}
             placeholder="What are you working on?"
-            className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400"
+            className="w-full rounded-[8px] border border-line-strong bg-bg px-3 py-2.5 text-sm text-ink placeholder:text-muted"
           />
-          <button
-            type="submit"
-            disabled={!goal.trim()}
-            className="w-full rounded-xl border-0 bg-indigo-600 px-3 py-2.5 text-sm font-semibold text-white hover:bg-indigo-500 disabled:cursor-not-allowed disabled:bg-slate-300"
-          >
+          <Button type="submit" variant="primary" disabled={!goal.trim()} className="w-full">
             Start
-          </button>
+          </Button>
         </form>
       )}
-      {error && <p className="m-0 text-xs text-rose-600" role="alert">{error}</p>}
-      <button
-        type="button"
-        onClick={openPanel}
-        disabled={windowId === null}
-        className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-      >
+      {error && <ErrorBlock>{error}</ErrorBlock>}
+      <Button onClick={openPanel} disabled={windowId === null} className="w-full">
         Open side panel
-      </button>
+      </Button>
     </main>
   );
 }

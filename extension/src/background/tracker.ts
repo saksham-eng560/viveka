@@ -206,7 +206,7 @@ export function refreshActiveTab(opts: { force?: boolean } = {}): Promise<void> 
   return rt.refreshing;
 }
 
-/** Periodic work: session accounting, heartbeat, AI probe, AW flush, nudge evaluation. */
+/** Periodic work: session accounting, heartbeat, model probe, AW flush, nudge evaluation. */
 export async function tick(now = Date.now()): Promise<void> {
   if (isInactive()) return;
   const snap = await getSnapshot();

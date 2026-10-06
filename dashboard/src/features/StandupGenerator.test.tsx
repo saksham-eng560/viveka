@@ -20,7 +20,7 @@ beforeEach(() => {
 });
 
 describe("StandupGenerator", () => {
-  it("shows loading then markdown with AI badge", async () => {
+  it("shows loading then markdown with local-model badge", async () => {
     let resolve!: (v: never) => void;
     mocked.mockReturnValue(new Promise((r) => (resolve = r as never)));
     const user = userEvent.setup();
@@ -29,7 +29,7 @@ describe("StandupGenerator", () => {
     expect(screen.getByRole("button", { name: /Generating/ })).toBeDisabled();
     resolve({ markdown: "## Done\n- Shipped dashboard", generatedBy: "llm", model: "qwen", source: "aw" } as never);
     expect(await screen.findByRole("heading", { name: "Done" })).toBeInTheDocument();
-    expect(screen.getByText("AI")).toBeInTheDocument();
+    expect(screen.getByText("Written by your local model")).toBeInTheDocument();
     expect(screen.getByText(/No data left the machine/)).toBeInTheDocument();
     expect(mocked).toHaveBeenCalledWith("2026-10-06");
   });
@@ -39,7 +39,13 @@ describe("StandupGenerator", () => {
     const user = userEvent.setup();
     render(<StandupGenerator date="2026-10-06" />);
     await user.click(screen.getByRole("button", { name: "Generate Standup" }));
-    expect(await screen.findByText("template")).toBeInTheDocument();
+    expect(await screen.findByText("Written from a template")).toBeInTheDocument();
+  });
+
+  it("shows the standup idle quote with attribution", () => {
+    render(<StandupGenerator date="2026-10-06" />);
+    expect(screen.getByText(/Stand up, be bold, be strong/)).toBeInTheDocument();
+    expect(screen.getByText(/Swami Vivekananda, Complete Works, Vol. 2: Jnana-Yoga/)).toBeInTheDocument();
   });
 
   it("shows backend detail on 503", async () => {

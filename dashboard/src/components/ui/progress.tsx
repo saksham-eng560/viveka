@@ -17,10 +17,10 @@ export function Progress({ value, label, className, indicatorClassName }: Progre
       aria-valuemin={0}
       aria-valuemax={100}
       aria-valuenow={Math.round(v)}
-      className={cn("h-2.5 w-full overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800", className)}
+      className={cn("h-2.5 w-full overflow-hidden rounded-full bg-line", className)}
     >
       <div
-        className={cn("h-full rounded-full bg-indigo-600 transition-[width] duration-500", indicatorClassName)}
+        className={cn("h-full rounded-full bg-productive transition-[width] duration-500", indicatorClassName)}
         style={{ width: `${v}%` }}
       />
     </div>
