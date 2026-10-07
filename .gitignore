@@ -23,9 +23,9 @@ __pycache__
 # runtime state written by start.sh
 .run/
 
-# Sheru figure copied from buddy/web/sheru.svg by npm pre-scripts
-extension/public/sheru.svg
-dashboard/public/sheru.svg
+# Leo figure copied from buddy/web/leo.svg by npm pre-scripts
+extension/public/leo.svg
+dashboard/public/leo.svg
 # buddy app build output and local data
 buddy/build/
 .data/

@@ -1,11 +1,11 @@
-// Sheru: the lion-cub focus buddy on your desktop.
+// Viveka: Leo, the lion-cub focus buddy, on your desktop.
 //
-// A transparent, always-on-top panel (top-left of the screen) that hosts the Sheru web UI
-// served by Sheru's backend, plus the desktop sensors the coach needs:
+// A transparent, always-on-top panel (top-left of the screen) that hosts the Leo web UI
+// served by Leo's backend, plus the desktop sensors the coach needs:
 //   * frontmost app + window title (window title needs Accessibility permission)
 //   * seconds since the last key press / any input (system counters; no key logging)
 //   * screen lock state
-// Build: buddy/build.sh   Run: buddy/build/Sheru.app/Contents/MacOS/Sheru --port 8000
+// Build: buddy/build.sh   Run: buddy/build/Viveka.app/Contents/MacOS/Viveka --port 8000
 
 import AppKit
 import ApplicationServices
@@ -105,7 +105,7 @@ final class BuddyApp: NSObject, NSApplicationDelegate, WKScriptMessageHandler, W
         c.timeoutIntervalForRequest = 2.5
         return URLSession(configuration: c)
     }()
-    let ownBundle = Bundle.main.bundleIdentifier ?? "dev.sheru.app"
+    let ownBundle = Bundle.main.bundleIdentifier ?? "dev.viveka.app"
 
     func applicationDidFinishLaunching(_ note: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -208,9 +208,9 @@ final class BuddyApp: NSObject, NSApplicationDelegate, WKScriptMessageHandler, W
     func buildStatusItem() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         statusItem.button?.title = "🦁"
-        statusItem.button?.toolTip = "Sheru, your focus buddy"
+        statusItem.button?.toolTip = "Leo, your focus buddy"
         let menu = NSMenu()
-        menu.addItem(withTitle: "Show / Hide Sheru", action: #selector(toggleVisible), keyEquivalent: "s").target = self
+        menu.addItem(withTitle: "Show / Hide Leo", action: #selector(toggleVisible), keyEquivalent: "s").target = self
         menu.addItem(withTitle: "Swamiji quote", action: #selector(menuQuote), keyEquivalent: "").target = self
         menu.addItem(withTitle: "Quiet for 30 minutes", action: #selector(menuHush), keyEquivalent: "").target = self
         menu.addItem(withTitle: "Take a 5-minute break", action: #selector(menuBreak), keyEquivalent: "").target = self
@@ -221,9 +221,9 @@ final class BuddyApp: NSObject, NSApplicationDelegate, WKScriptMessageHandler, W
         menu.addItem(withTitle: "Reset position (top-left)", action: #selector(resetPosition), keyEquivalent: "").target = self
         menu.addItem(withTitle: "Allow window titles (Accessibility)…", action: #selector(openAccessibility),
                      keyEquivalent: "").target = self
-        menu.addItem(withTitle: "Reload Sheru", action: #selector(reloadPage), keyEquivalent: "r").target = self
+        menu.addItem(withTitle: "Reload Leo", action: #selector(reloadPage), keyEquivalent: "r").target = self
         menu.addItem(.separator())
-        menu.addItem(withTitle: "Quit Sheru", action: #selector(quit), keyEquivalent: "q").target = self
+        menu.addItem(withTitle: "Quit Viveka", action: #selector(quit), keyEquivalent: "q").target = self
         statusItem.menu = menu
     }
 
@@ -295,7 +295,7 @@ final class BuddyApp: NSObject, NSApplicationDelegate, WKScriptMessageHandler, W
            Date().timeIntervalSince(lastLookSent) > 0.05 {
             lastMouse = m
             lastLookSent = Date()
-            web.evaluateJavaScript("window.sheru && window.sheru.look(\(Int(local.x)), \(Int(local.y)))", completionHandler: nil)
+            web.evaluateJavaScript("window.leo && window.leo.look(\(Int(local.x)), \(Int(local.y)))", completionHandler: nil)
         }
     }
 
@@ -328,7 +328,7 @@ final class BuddyApp: NSObject, NSApplicationDelegate, WKScriptMessageHandler, W
             if panel.isKeyWindow { panel.resignKey() }
         case "log":  // page diagnostics (audio state etc.) end up in .run/logs/buddy.log
             if let text = body["text"] as? String {
-                FileHandle.standardError.write(("[sheru page] " + text + "\n").data(using: .utf8)!)
+                FileHandle.standardError.write(("[leo page] " + text + "\n").data(using: .utf8)!)
             }
         default:
             break
@@ -345,7 +345,7 @@ final class BuddyApp: NSObject, NSApplicationDelegate, WKScriptMessageHandler, W
         if let pid = front?.processIdentifier, bundle != ownBundle {
             title = Sensors.windowTitle(pid: pid)
         }
-        if bundle == ownBundle { app = "Sheru"; bundle = ownBundle; title = "" }
+        if bundle == ownBundle { app = "Viveka"; bundle = ownBundle; title = "" }
         let body: [String: Any] = [
             "app": app, "bundleId": bundle, "title": String(title.prefix(400)),
             "keyIdle": Sensors.keyIdle(), "inputIdle": Sensors.inputIdle(),

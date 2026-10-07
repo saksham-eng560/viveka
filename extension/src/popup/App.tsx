@@ -24,7 +24,7 @@ interface BrainState {
   today: { focusSeconds: number; distractionSeconds: number; alertCount: number };
 }
 
-/** Poll Sheru's brain directly (the popup is an extension page with host permission for it). */
+/** Poll Leo's brain directly (the popup is an extension page with host permission for it). */
 export function useBrain(intervalMs = 3000): { brain: BrainState | null; offline: boolean; refresh: () => void } {
   const [brain, setBrain] = useState<BrainState | null>(null);
   const [offline, setOffline] = useState(false);
@@ -67,11 +67,11 @@ const STATUS: Record<string, { text: string; dot: string }> = {
   focus: { text: "On track", dot: "var(--lh-ok)" },
   neutral: { text: "In between", dot: "var(--lh-ochre)" },
   distraction: { text: "Taking a detour", dot: "var(--lh-saffron)" },
-  away: { text: "Away · Sheru is napping", dot: "var(--lh-neutral)" },
+  away: { text: "Away · Leo is napping", dot: "var(--lh-neutral)" },
   break: { text: "On a break", dot: "var(--lh-neutral)" },
 };
 
-function SheruStatus({ brain }: { brain: BrainState }) {
+function LeoStatus({ brain }: { brain: BrainState }) {
   const key = brain.away ? "away" : brain.breakUntil ? "break" : brain.now?.verdict ?? "neutral";
   const s = STATUS[key] ?? STATUS["neutral"]!;
   return (
@@ -167,19 +167,19 @@ export function App() {
   return (
     <main className="space-y-3 p-4">
       <header className="flex items-center gap-3">
-        <img src="/sheru.svg" alt="Sheru the lion cub" width={52} height={60} className="shrink-0" />
+        <img src="/leo.svg" alt="Leo the lion cub" width={52} height={60} className="shrink-0" />
         <div className="min-w-0">
           <h1 className="m-0 font-serif text-[19px] font-semibold leading-6 text-heading">
-            {profile ? `Namaste, ${profile.firstName}!` : "Sheru"}
+            {profile ? `Namaste, ${profile.firstName}!` : "Viveka"}
           </h1>
           <p className="m-0 text-xs text-muted" data-testid="brain-line">
             {loading
-              ? "Looking for Sheru…"
+              ? "Looking for Leo…"
               : offline
-                ? "Sheru's brain is asleep"
+                ? "Leo's brain is asleep"
                 : brain?.buddyOnline
-                  ? "Sheru is on your desktop, keeping you company"
-                  : "Sheru is watching your browser"}
+                  ? "Leo is on your desktop, keeping you company"
+                  : "Leo is watching your browser"}
           </p>
         </div>
       </header>
@@ -188,7 +188,7 @@ export function App() {
 
       {brain && profile && (
         <>
-          <SheruStatus brain={brain} />
+          <LeoStatus brain={brain} />
           <div>
             <p className="m-0 mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted">Your goals</p>
             <ul className="m-0 flex list-none flex-wrap gap-1.5 p-0" data-testid="goals">
@@ -203,7 +203,7 @@ export function App() {
             <Button className="px-1 text-xs" onClick={() => void brainAction("quote")}>Quote</Button>
             <Button className="px-1 text-xs" onClick={() => void brainAction("break", 5)}>5-min break</Button>
             {brain.hushUntil ? (
-              <Button className="px-1 text-xs" onClick={() => void brainAction("resume")}>Wake Sheru</Button>
+              <Button className="px-1 text-xs" onClick={() => void brainAction("resume")}>Wake Leo</Button>
             ) : (
               <Button className="px-1 text-xs" onClick={() => void brainAction("hush", 30)}>Quiet 30m</Button>
             )}
@@ -218,7 +218,7 @@ export function App() {
 
       {brain && !profile && (
         <section className="space-y-2.5 rounded-[12px] border border-line bg-surface p-3">
-          <p className="m-0 text-sm text-ink">Hi! I'm Sheru. Tell me your name and goals and I'll help you stay on them.</p>
+          <p className="m-0 text-sm text-ink">Hi! I'm Leo. Tell me your name and goals and I'll help you stay on them.</p>
           <Button variant="primary" className="w-full" onClick={() => openTab(`${DASHBOARD_URL}/?onboarding=1`)}>
             Set my goals
           </Button>
@@ -228,7 +228,7 @@ export function App() {
       {offline && (
         <>
           <section className="rounded-[12px] border border-line bg-surface p-3 text-xs leading-[18px] text-ink" data-testid="brain-offline">
-            Start Sheru's brain to wake him up: open Terminal in the project folder and run <code className="font-semibold">./start.sh</code>.
+            Start Leo's brain to wake him up: open Terminal in the project folder and run <code className="font-semibold">./start.sh</code>.
             Until then I can still guard this browser on my own:
           </section>
           <QuoteBlock quote={quoteFor("sessionStart")} size="sm" />

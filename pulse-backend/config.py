@@ -27,10 +27,10 @@ class Settings:
     standup_fallback: str = "template"
     aw_bucket_prefix: str = "aw-watcher-web-lighthouse"
     llm_timeout_seconds: float = 120.0
-    # Sheru, the desktop buddy (coach engine)
+    # Leo, the desktop buddy (coach engine)
     data_dir: str = str(_HERE.parent / ".data")
     models_dir: str = str(_HERE.parent / ".models")
-    buddy_model: str = "sheru"
+    buddy_model: str = "viveka-leo"
     llm_classify: bool = True
     coach_tick_seconds: float = 1.0
 
@@ -63,10 +63,10 @@ def get_settings() -> Settings:
         standup_fallback=_choice("STANDUP_FALLBACK", "template", _FALLBACKS),
         aw_bucket_prefix=_env("AW_BUCKET_PREFIX", "aw-watcher-web-lighthouse"),
         llm_timeout_seconds=_float("LLM_TIMEOUT_SECONDS", 120.0),
-        # SHERU_* names; the older LIGHTHOUSE_* names keep working
-        data_dir=_env("SHERU_DATA_DIR", _env("LIGHTHOUSE_DATA_DIR", str(_HERE.parent / ".data"))),
-        models_dir=_env("SHERU_MODELS_DIR", str(_HERE.parent / ".models")),
-        buddy_model=_env("BUDDY_MODEL", "sheru"),
+        # VIVEKA_* names; the older SHERU_* and LIGHTHOUSE_* names keep working
+        data_dir=_env("VIVEKA_DATA_DIR", _env("SHERU_DATA_DIR", _env("LIGHTHOUSE_DATA_DIR", str(_HERE.parent / ".data")))),
+        models_dir=_env("VIVEKA_MODELS_DIR", _env("SHERU_MODELS_DIR", str(_HERE.parent / ".models"))),
+        buddy_model=_env("BUDDY_MODEL", "viveka-leo"),
         llm_classify=_env("LLM_CLASSIFY", "on").lower() not in ("0", "off", "false", "no"),
         coach_tick_seconds=_float("COACH_TICK_SECONDS", 1.0),
     )

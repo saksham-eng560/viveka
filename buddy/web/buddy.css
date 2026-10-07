@@ -33,25 +33,25 @@ body.preview {
     linear-gradient(135deg, #3d5a80 0%, #5c7aa6 45%, #98c1d9 100%);
 }
 body.preview::after {
-  content: "Preview of Sheru (the real one floats on your desktop)";
+  content: "Preview of Leo (the real one floats on your desktop)";
   position: fixed; right: 12px; bottom: 10px; font-size: 12px; color: rgba(255,255,255,.85);
 }
 
 #stage { position: relative; width: 500px; height: 340px; }
 
-/* ---------------------------------------------------------------- Sheru */
-#sheru-wrap {
+/* ---------------------------------------------------------------- Leo */
+#leo-wrap {
   position: absolute; left: 6px; top: 8px; width: 124px;
   cursor: grab; touch-action: none;
 }
-#sheru-wrap:active { cursor: grabbing; }
-#sheru svg { width: 124px; height: auto; display: block; overflow: visible; filter: drop-shadow(0 3px 6px rgba(40, 20, 8, .18)); }
-#sheru { transition: transform .25s ease; }
-#sheru-wrap:hover #sheru { transform: scale(1.04) rotate(-2deg); }
+#leo-wrap:active { cursor: grabbing; }
+#leo svg { width: 124px; height: auto; display: block; overflow: visible; filter: drop-shadow(0 3px 6px rgba(40, 20, 8, .18)); }
+#leo { transition: transform .25s ease; }
+#leo-wrap:hover #leo { transform: scale(1.04) rotate(-2deg); }
 
 /* JS-driven blinking replaces the CSS loop from the standalone file */
-#sheru #sh-eyes { animation: none; transition: transform 70ms ease; }
-#sheru.blink #sh-eyes { transform: scaleY(.08); }
+#leo #sh-eyes { animation: none; transition: transform 70ms ease; }
+#leo.blink #sh-eyes { transform: scaleY(.08); }
 #sh-eye-l, #sh-eye-r { transition: transform .12s ease-out; }
 
 #status-chip {
@@ -60,17 +60,17 @@ body.preview::after {
   background: rgba(255, 249, 238, .96); border: 1.5px solid var(--line); color: var(--maroon);
   box-shadow: 0 2px 6px rgba(40, 20, 8, .15); pointer-events: none;
 }
-#sheru-wrap:hover #status-chip:not(:empty) { display: block; }
+#leo-wrap:hover #status-chip:not(:empty) { display: block; }
 #status-chip { display: none; }
 
 /* one-shot motions */
-#sheru.hop svg { animation: hop .6s cubic-bezier(.3, .7, .4, 1.35); }
-#sheru.jump svg { animation: hop .6s cubic-bezier(.3, .7, .4, 1.35) 3; }
-#sheru.shake svg { animation: shake .5s ease-in-out; }
-#sheru.squish svg { animation: squish .35s ease-out; }
-#sheru.wiggle-ears #sh-ear-l { animation: ear-l .5s ease-in-out; transform-origin: 54px 72px; }
-#sheru.wiggle-ears #sh-ear-r { animation: ear-r .5s ease-in-out .08s; transform-origin: 146px 72px; }
-#sheru.flick #sh-tail { animation: flick .6s ease-in-out; }
+#leo.hop svg { animation: hop .6s cubic-bezier(.3, .7, .4, 1.35); }
+#leo.jump svg { animation: hop .6s cubic-bezier(.3, .7, .4, 1.35) 3; }
+#leo.shake svg { animation: shake .5s ease-in-out; }
+#leo.squish svg { animation: squish .35s ease-out; }
+#leo.wiggle-ears #sh-ear-l { animation: ear-l .5s ease-in-out; transform-origin: 54px 72px; }
+#leo.wiggle-ears #sh-ear-r { animation: ear-r .5s ease-in-out .08s; transform-origin: 146px 72px; }
+#leo.flick #sh-tail { animation: flick .6s ease-in-out; }
 @keyframes hop { 0% { transform: translateY(0) scale(1, 1); } 25% { transform: translateY(2px) scale(1.06, .94); }
   55% { transform: translateY(-16px) scale(.96, 1.05); } 85% { transform: translateY(0) scale(1.04, .96); } 100% { transform: none; } }
 @keyframes shake { 0%, 100% { transform: rotate(0); } 20% { transform: rotate(-6deg); } 40% { transform: rotate(5deg); }
@@ -81,7 +81,7 @@ body.preview::after {
 @keyframes flick { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(-30deg); } }
 
 /* ---------------------------------------------------------------- moods */
-.sheru .fx { opacity: 0; transition: opacity .3s; }
+.leo .fx { opacity: 0; transition: opacity .3s; }
 .mood-happy #sh-eyes, .mood-celebrate #sh-eyes, .mood-break #sh-eyes { display: none; }
 .mood-happy #sh-eyes-happy, .mood-celebrate #sh-eyes-happy, .mood-break #sh-eyes-happy { display: inline; }
 .mood-happy #sh-mouth-w, .mood-celebrate #sh-mouth-w { display: none; }
@@ -140,8 +140,8 @@ body.preview::after {
 @keyframes rise { 0% { transform: translateY(10px) scale(.4); opacity: 0; } 40% { opacity: 1; } 100% { transform: translateY(-14px) scale(1.05); opacity: 0; } }
 
 /* talking: mouth opens and closes while the bubble types */
-#sheru.talking #sh-mouth-w, #sheru.talking #sh-mouth-smile, #sheru.talking #sh-mouth-o, #sheru.talking #sh-mouth-wobble { display: none; }
-#sheru.talking #sh-mouth-open { display: inline; animation: talk .26s ease-in-out infinite alternate; transform-origin: 100px 124px; }
+#leo.talking #sh-mouth-w, #leo.talking #sh-mouth-smile, #leo.talking #sh-mouth-o, #leo.talking #sh-mouth-wobble { display: none; }
+#leo.talking #sh-mouth-open { display: inline; animation: talk .26s ease-in-out infinite alternate; transform-origin: 100px 124px; }
 @keyframes talk { from { transform: scaleY(.35); } to { transform: scaleY(1); } }
 
 /* ---------------------------------------------------------------- bubble */

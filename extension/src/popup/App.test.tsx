@@ -42,7 +42,7 @@ describe("Popup", () => {
     expect(await screen.findByText("Set my goals")).toBeTruthy();
   });
 
-  it("explains how to wake Sheru and still offers a browser-only session when the brain is down", async () => {
+  it("explains how to wake Leo and still offers a browser-only session when the brain is down", async () => {
     mockBackground();
     vi.stubGlobal("fetch", vi.fn(async () => { throw new TypeError("down"); }));
     render(<App />);

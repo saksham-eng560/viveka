@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# One-time (idempotent) setup: dependencies, Python venv, Ollama + Sheru models, extension build, desktop buddy.
+# One-time (idempotent) setup: dependencies, Python venv, Ollama + Leo models, extension build, desktop buddy.
 set -euo pipefail
 . "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/scripts/lib.sh"
 
@@ -10,7 +10,7 @@ Usage: ./setup.sh [--dev] [--skip-model] [--with-env] [-h|--help]
 
   --dev          also install pulse-backend/requirements-dev.txt (pytest etc.)
   --skip-model   do not check/pull the Ollama model
-  --skip-voice   do not install Sheru's natural voice (~205 MB download)
+  --skip-voice   do not install Leo's natural voice (~205 MB download)
   --with-env     copy .env.example -> .env files (defaults already work without them)
   -h, --help     show this help
 
@@ -136,11 +136,11 @@ else
     ok "Pulled $MODEL"
     add "Ollama model: $MODEL (pulled)"
   fi
-  if ensure_sheru_model "$MODEL"; then
-    ok "Sheru persona model ready (ollama model '$SHERU_MODEL', built on $MODEL)"
-    add "Sheru model: $SHERU_MODEL (from ollama/Modelfile.sheru)"
+  if ensure_leo_model "$MODEL"; then
+    ok "Leo persona model ready (ollama model '$LEO_MODEL', built on $MODEL)"
+    add "Leo model: $LEO_MODEL (from ollama/Modelfile.leo)"
   else
-    warn "Could not build the '$SHERU_MODEL' model; Sheru will use $MODEL with the same persona prompt."
+    warn "Could not build the '$LEO_MODEL' model; Leo will use $MODEL with the same persona prompt."
   fi
   cleanup_tmp; TMP_OLLAMA_PID=""
 fi
@@ -157,32 +157,32 @@ fi
 ok "Extension built: $EXT_DIR/dist (model: $EXT_MODEL)"
 add "Extension build: extension/dist (model: $EXT_MODEL)"
 
-# ---- Sheru's natural voice ----------------------------------------------------------
+# ---- Leo's natural voice ----------------------------------------------------------
 if [ "$SKIP_VOICE" -eq 1 ]; then
-  info "Skipping the natural voice (--skip-voice); Sheru will use the macOS voice"
+  info "Skipping the natural voice (--skip-voice); Leo will use the macOS voice"
   add "Voice: skipped (macOS voice is used)"
 elif voice_installed; then
-  ok "Sheru's natural voice already installed"
+  ok "Leo's natural voice already installed"
   add "Voice: natural (Kokoro, on-device)"
 elif install_voice; then
   add "Voice: natural (Kokoro, on-device)"
 else
-  warn "Could not install the natural voice; Sheru will use the macOS voice (retry: scripts/install-voice.sh)"
+  warn "Could not install the natural voice; Leo will use the macOS voice (retry: scripts/install-voice.sh)"
   add "Voice: NOT installed (macOS voice is used)"
 fi
 
-# ---- Sheru desktop buddy (macOS) ------------------------------------------------
+# ---- Leo desktop buddy (macOS) ------------------------------------------------
 if [ "$(uname -s)" = "Darwin" ]; then
   if have swiftc; then
-    info "Building Sheru's desktop app (Sheru.app)"
+    info "Building Leo's desktop app (Viveka.app)"
     if "$BUDDY_DIR/build.sh"; then
-      add "Desktop buddy: buddy/build/Sheru.app"
+      add "Desktop buddy: buddy/build/Viveka.app"
     else
-      warn "Could not build the desktop buddy; Sheru still works in the browser."
+      warn "Could not build the desktop buddy; Leo still works in the browser."
       add "Desktop buddy: build FAILED (see output above)"
     fi
   else
-    warn "swiftc not found: install the Xcode Command Line Tools (xcode-select --install) to get Sheru on your desktop."
+    warn "swiftc not found: install the Xcode Command Line Tools (xcode-select --install) to get Leo on your desktop."
     add "Desktop buddy: skipped (no swiftc)"
   fi
 fi

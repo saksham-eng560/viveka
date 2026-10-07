@@ -91,7 +91,7 @@ let evaluating = false;
 /** Fire the overlay when the user has been off-task past the threshold and no cooldown is active. */
 export async function evaluateNudge(now = Date.now()): Promise<boolean> {
   if (evaluating) return false;
-  // Sheru's brain (backend) is up: it judges the whole desktop and decides when to nudge.
+  // Leo's brain (backend) is up: it judges the whole desktop and decides when to nudge.
   if (brainOnline(now)) return false;
   evaluating = true;
   try {

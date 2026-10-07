@@ -1,4 +1,4 @@
-/* Sheru, the desk buddy: presentation + interaction.
+/* Leo, the desk buddy: presentation + interaction.
  * The brain lives in the backend (/api/buddy/*). Inside the macOS app this page is
  * loaded in a transparent always-on-top window; window.webkit.messageHandlers.buddy
  * is the bridge for native things (click-through regions, dragging, activating apps).
@@ -13,7 +13,7 @@
 
   const $ = (id) => document.getElementById(id);
   const ui = {
-    wrap: $("sheru-wrap"), host: $("sheru"), chip: $("status-chip"),
+    wrap: $("leo-wrap"), host: $("leo"), chip: $("status-chip"),
     bubble: $("bubble"), title: $("bubble-title"), text: $("bubble-text"), source: $("bubble-source"),
     actions: $("bubble-actions"), close: $("bubble-close"), timer: $("bubble-timer"),
     chatForm: $("chat-form"), chatInput: $("chat-input"),
@@ -38,11 +38,11 @@
 
   // ---------------------------------------------------------------- figure
   async function loadFigure() {
-    const res = await fetch("sheru.svg", { cache: "no-cache" });
+    const res = await fetch("leo.svg", { cache: "no-cache" });
     ui.host.innerHTML = await res.text();
     svg = ui.host.querySelector("svg");
     svg.removeAttribute("width"); svg.removeAttribute("height");
-    svg.querySelector("title")?.remove(); // no grey native tooltip over Sheru; aria-label keeps the name
+    svg.querySelector("title")?.remove(); // no grey native tooltip over Leo; aria-label keeps the name
     ui.wrap.removeAttribute("title");
     setMood("idle");
     scheduleBlink(); scheduleFidget(); reportHitRects();
@@ -98,7 +98,7 @@
     look(cx + (Math.random() - 0.5) * 600, r.top + (Math.random() - 0.3) * 300);
     setTimeout(() => { if (Date.now() - lastLook > 900) look(cx, r.top + 70); }, 1400);
   }
-  window.sheru = { look, say: (text) => show({ id: -Date.now(), kind: "info", mood: "talk", text, ttl: 8, actions: [] }) };
+  window.leo = { look, say: (text) => show({ id: -Date.now(), kind: "info", mood: "talk", text, ttl: 8, actions: [] }) };
   if (!NATIVE) window.addEventListener("mousemove", (e) => look(e.clientX, e.clientY));
 
   // -------------------------------------------------------------- hit areas
@@ -144,7 +144,7 @@
   }
 
   // ----------------------------------------------------------------- voice
-  // Sheru's natural voice comes from the backend (on-device neural TTS, pre-rendered when a message is
+  // Leo's natural voice comes from the backend (on-device neural TTS, pre-rendered when a message is
   // created). Played a little faster than recorded for a cub-like pitch; the backend slows the speech
   // down by the same factor so the tempo stays as chosen. Browser speech is only a last resort.
   const IMPORTANT = new Set(["greeting", "nudge", "distraction", "stall", "break", "back", "info", "chat"]);
@@ -271,7 +271,7 @@
     reportHitRects();
   }
 
-  // timed hide: never cut Sheru off mid-sentence
+  // timed hide: never cut Leo off mid-sentence
   function autoHide() {
     if (talkingAudio) { st.hideTimer = setTimeout(() => autoHide(), 700); return; }
     hide();
@@ -315,7 +315,7 @@
       show(msg); return;
     }
     if (msg.alert) {
-      // alerts jump the queue and replace whatever is on screen (unless the user is typing to Sheru)
+      // alerts jump the queue and replace whatever is on screen (unless the user is typing to Leo)
       st.queue = st.queue.filter((m) => m.alert);
       if (st.chatting) { st.queue.unshift(msg); return; }
       show(msg); return;
@@ -377,7 +377,7 @@
     clearTimers();
     st.chatting = true; st.menuOpen = false;
     const greeting = st.current && st.current.kind === "chat" ? st.current.text : "Ask me anything: focus tips, Swamiji's life, or how your day is going.";
-    show({ id: -Date.now(), kind: "chat", mood: "talk", title: "Chat with Sheru", text: greeting, ttl: null, actions: [], keepChat: true });
+    show({ id: -Date.now(), kind: "chat", mood: "talk", title: "Chat with Leo", text: greeting, ttl: null, actions: [], keepChat: true });
     st.chatting = true;
     ui.chatForm.hidden = false;
     native({ type: "focus" });
@@ -396,9 +396,9 @@
     ui.text.classList.add("typing-caret");
     try {
       const res = await post("/api/buddy/chat", { text });
-      show({ id: -Date.now(), kind: "chat", mood: res.mood || "talk", title: "Sheru", text: res.reply, ttl: null, actions: [], keepChat: true, speech: res.speech || [] });
+      show({ id: -Date.now(), kind: "chat", mood: res.mood || "talk", title: "Leo", text: res.reply, ttl: null, actions: [], keepChat: true, speech: res.speech || [] });
     } catch (_) {
-      show({ id: -Date.now(), kind: "chat", mood: "worried", title: "Sheru", text: "Hmm, my brain isn't answering. Try again in a moment?", ttl: null, actions: [], keepChat: true });
+      show({ id: -Date.now(), kind: "chat", mood: "worried", title: "Leo", text: "Hmm, my brain isn't answering. Try again in a moment?", ttl: null, actions: [], keepChat: true });
     }
     st.chatting = true; ui.chatForm.hidden = false; ui.chatInput.disabled = false; ui.chatInput.focus();
   });

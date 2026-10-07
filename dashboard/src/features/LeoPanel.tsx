@@ -31,7 +31,7 @@ const PACES: { id: Pace; label: string }[] = [
   { id: "demo", label: "Demo" },
 ];
 
-export function SheruPanel({ profile, onProfile }: { profile: Profile; onProfile: (p: Profile) => void }) {
+export function LeoPanel({ profile, onProfile }: { profile: Profile; onProfile: (p: Profile) => void }) {
   const [today, setToday] = useState<TodayResponse | null>(null);
   const [offline, setOffline] = useState(false);
 
@@ -65,17 +65,17 @@ export function SheruPanel({ profile, onProfile }: { profile: Profile; onProfile
   const nudges = (today?.alerts ?? []).filter((a) => ["distraction", "stall", "nudge"].includes(a.kind)).slice(-4).reverse();
 
   return (
-    <Card className="overflow-hidden" data-testid="sheru-panel">
+    <Card className="overflow-hidden" data-testid="leo-panel">
       <div className="grid gap-0 md:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
         <div className="flex gap-4 p-5">
-          <img src="/sheru.svg" alt="Sheru the lion cub" width={92} height={106} className="shrink-0 self-start" />
+          <img src="/leo.svg" alt="Leo the lion cub" width={92} height={106} className="shrink-0 self-start" />
           <div className="min-w-0 flex-1">
             <h2 className="font-serif text-[20px] leading-7 font-semibold text-heading">
-              {st?.away ? `Sheru is napping until you're back` : `Sheru is with you, ${profile.name.split(" ")[0]}`}
+              {st?.away ? `Leo is napping until you're back` : `Leo is with you, ${profile.name.split(" ")[0]}`}
             </h2>
-            {offline && <p className="mt-1 text-sm text-muted">Can't reach Sheru's brain. Is ./start.sh running?</p>}
+            {offline && <p className="mt-1 text-sm text-muted">Can't reach Leo's brain. Is ./start.sh running?</p>}
             {now && v && !st?.away && (
-              <p className="mt-1 flex flex-wrap items-center gap-x-2 text-sm text-ink" data-testid="sheru-now">
+              <p className="mt-1 flex flex-wrap items-center gap-x-2 text-sm text-ink" data-testid="leo-now">
                 <span className={cn("h-2.5 w-2.5 rounded-full", v.dot)} aria-hidden="true" />
                 <b>{v.label}</b>
                 <span className="text-muted">· {now.label}</span>
@@ -94,7 +94,7 @@ export function SheruPanel({ profile, onProfile }: { profile: Profile; onProfile
               <Button size="sm" variant="outline" onClick={() => act("fact")}>Fun fact</Button>
               <Button size="sm" variant="outline" onClick={() => act("break", 5)}>5-min break</Button>
               {st?.hushUntil ? (
-                <Button size="sm" variant="outline" onClick={() => act("resume")}>Wake Sheru</Button>
+                <Button size="sm" variant="outline" onClick={() => act("resume")}>Wake Leo</Button>
               ) : (
                 <Button size="sm" variant="outline" onClick={() => act("hush", 30)}>Quiet 30 min</Button>
               )}
@@ -138,11 +138,11 @@ export function SheruPanel({ profile, onProfile }: { profile: Profile; onProfile
             </div>
           </div>
           <ul className="space-y-1.5" aria-label="Connections">
-            <Conn ok={!!st?.buddyOnline} label="Sheru on your desktop" hint="Starts with ./start.sh (macOS)." />
+            <Conn ok={!!st?.buddyOnline} label="Leo on your desktop" hint="Starts with ./start.sh (macOS)." />
             <Conn ok={!!st?.extensionOnline} label="Browser extension" hint="Opened automatically by ./start.sh, or load extension/dist." />
-            <Conn ok={st?.llmOnline !== false} label="Local model (Ollama)" hint="Without it Sheru uses friendly templates." />
+            <Conn ok={st?.llmOnline !== false} label="Local model (Ollama)" hint="Without it Leo uses friendly templates." />
             {st?.buddyOnline && !st.axTrusted && (
-              <Conn ok={false} label="Window titles" hint="Allow Accessibility for your Terminal to let Sheru read window titles." />
+              <Conn ok={false} label="Window titles" hint="Allow Accessibility for your Terminal to let Leo read window titles." />
             )}
           </ul>
         </div>

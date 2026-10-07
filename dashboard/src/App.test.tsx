@@ -69,7 +69,7 @@ describe("App", () => {
     render(<App />);
     expect(await screen.findByText("Local model")).toBeInTheDocument();
     expect(screen.queryByText("Ollama")).not.toBeInTheDocument();
-    expect(screen.getByText(/Sheru keeps everything on this machine/)).toBeInTheDocument();
+    expect(screen.getByText(/Viveka keeps everything on this machine/)).toBeInTheDocument();
   });
 
   it("shows a quote and attribution on an empty day", async () => {
@@ -84,17 +84,17 @@ describe("App", () => {
       source: "sample",
     });
     render(<App />);
-    expect(await screen.findByText(/Sheru starts logging as soon as/)).toBeInTheDocument();
+    expect(await screen.findByText(/Leo starts logging as soon as/)).toBeInTheDocument();
     const quotes = screen.getAllByTestId("quote-block").map((e) => e.textContent ?? "");
     expect(quotes.some((t) => /treasure-house of knowledge|hands before our eyes/.test(t))).toBe(true);
     expect(quotes.some((t) => t.includes("— Swami Vivekananda, Complete Works, Vol. 2:"))).toBe(true);
   });
 
-  it("shows Sheru's live panel with goals, status and today's focus", async () => {
+  it("shows Leo's live panel with goals, status and today's focus", async () => {
     render(<App />);
-    expect(await screen.findByText("Sheru is with you, Saksham")).toBeInTheDocument();
-    expect(await screen.findByTestId("sheru-now")).toHaveTextContent("On track");
-    expect(screen.getByTestId("sheru-now")).toHaveTextContent("LeetCode");
+    expect(await screen.findByText("Leo is with you, Saksham")).toBeInTheDocument();
+    expect(await screen.findByTestId("leo-now")).toHaveTextContent("On track");
+    expect(screen.getByTestId("leo-now")).toHaveTextContent("LeetCode");
     expect(screen.getByTestId("today-focus")).toHaveTextContent("50m");
     expect(screen.getAllByText("Crack DSA for placements").length).toBeGreaterThan(0);
     expect(screen.getByRole("button", { name: "Edit goals" })).toBeInTheDocument();
@@ -103,7 +103,7 @@ describe("App", () => {
   it("opens onboarding on first run when there is no profile", async () => {
     vi.mocked(getProfile).mockResolvedValue({ exists: false, profile: null });
     render(<App />);
-    expect(await screen.findByText("Namaste! I'm Sheru.")).toBeInTheDocument();
+    expect(await screen.findByText("Namaste! I'm Leo.")).toBeInTheDocument();
     expect(screen.getByText("Step 1 of 3")).toBeInTheDocument();
   });
 
@@ -115,14 +115,14 @@ describe("App", () => {
   });
 
   it("switches between Today and Settings, and opens Settings from ?view=settings", async () => {
-    vi.mocked(getSettings).mockRejectedValue(new Error("Set up Sheru first (onboarding)"));
+    vi.mocked(getSettings).mockRejectedValue(new Error("Set up Leo first (onboarding)"));
     render(<App />);
     const tab = await screen.findByRole("tab", { name: "Settings" });
     tab.click();
-    expect(await screen.findByRole("alert")).toHaveTextContent("Set up Sheru first");
+    expect(await screen.findByRole("alert")).toHaveTextContent("Set up Leo first");
     expect(window.location.search).toBe("?view=settings");
     (await screen.findByRole("tab", { name: "Today" })).click();
-    expect(await screen.findByText("Sheru is with you, Saksham")).toBeInTheDocument();
+    expect(await screen.findByText("Leo is with you, Saksham")).toBeInTheDocument();
     expect(window.location.search).toBe("");
   });
 

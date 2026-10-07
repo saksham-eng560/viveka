@@ -8,7 +8,7 @@ import { MetricCards } from "./features/MetricCards";
 import { StandupGenerator } from "./features/StandupGenerator";
 import { Onboarding } from "./features/Onboarding";
 import { SettingsPage } from "./features/SettingsPage";
-import { SheruPanel } from "./features/SheruPanel";
+import { LeoPanel } from "./features/LeoPanel";
 import { StatusBar } from "./features/StatusBar";
 import { TimelineChart } from "./features/TimelineChart";
 import { apiErrorMessage, getHealth, getProfile, getSummary, getTimeline, localTimeZone } from "./lib/api";
@@ -114,10 +114,10 @@ function Dashboard({ profile, onProfile, onEditGoals, view, onView, onStartOver 
       <header className="sticky top-0 z-10 border-b border-line bg-bg">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-6 gap-y-3 px-4 py-3 sm:px-6">
           <div className="flex items-center gap-3">
-            <img src="/sheru.svg" alt="" width={36} height={42} aria-hidden="true" />
+            <img src="/leo.svg" alt="" width={36} height={42} aria-hidden="true" />
             <div>
-              <h1 className="font-serif text-[22px] leading-7 font-semibold text-heading">Sheru</h1>
-              <p className="text-xs text-muted">Your focus buddy</p>
+              <h1 className="font-serif text-[22px] leading-7 font-semibold text-heading">Viveka</h1>
+              <p className="text-xs text-muted">Focus, with Leo</p>
             </div>
             {profile && (
               <nav role="tablist" aria-label="Sections" className="ml-2 inline-flex rounded-full border border-line bg-surface p-0.5">
@@ -152,7 +152,7 @@ function Dashboard({ profile, onProfile, onEditGoals, view, onView, onStartOver 
               </>
             )}
             <Button variant="primary" size="sm" onClick={onEditGoals}>
-              {profile ? "Edit goals" : "Set up Sheru"}
+              {profile ? "Edit goals" : "Set up Leo"}
             </Button>
           </div>
         </div>
@@ -164,7 +164,7 @@ function Dashboard({ profile, onProfile, onEditGoals, view, onView, onStartOver 
         </main>
       ) : (
       <main className="mx-auto max-w-6xl space-y-6 px-4 py-6 sm:px-6">
-        {profile && <SheruPanel profile={profile} onProfile={onProfile} />}
+        {profile && <LeoPanel profile={profile} onProfile={onProfile} />}
         {error && (
           <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-(--lh-radius) border border-line bg-tint-maroon p-4 text-sm text-heading">
             <div>
@@ -181,7 +181,7 @@ function Dashboard({ profile, onProfile, onEditGoals, view, onView, onStartOver 
           <Card className="space-y-4 p-6 text-sm text-ink">
             <QuoteBlock quote={quoteFor("emptyDay", date)} className="mx-auto max-w-xl" />
             <p className="text-center">
-              No tracked activity for this day yet. Sheru starts logging as soon as the desktop buddy or the extension is running.
+              No tracked activity for this day yet. Leo starts logging as soon as the desktop buddy or the extension is running.
             </p>
           </Card>
         )}
@@ -201,7 +201,7 @@ function Dashboard({ profile, onProfile, onEditGoals, view, onView, onStartOver 
       )}
 
       <footer className="mx-auto max-w-6xl px-4 pb-8 text-center text-xs text-muted sm:px-6">
-        Sheru keeps everything on this machine: your activity, your settings and the local model that writes his lines.
+        Viveka keeps everything on this machine: your activity, your settings and the local model that writes his lines.
       </footer>
     </div>
   );

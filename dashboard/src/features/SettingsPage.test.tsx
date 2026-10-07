@@ -50,8 +50,8 @@ describe("SettingsPage", () => {
 
   it("renders every section with the current values", async () => {
     render(<SettingsPage profile={PROFILE} onEditGoals={vi.fn()} onStartOver={vi.fn()} />);
-    expect(await screen.findByText("Sheru's settings")).toBeInTheDocument();
-    for (const t of ["Nudges", "What Sheru watches for", "Voice & sounds", "Personality & wisdom", "Always treated as work", "You & your data"]) {
+    expect(await screen.findByText("Leo's settings")).toBeInTheDocument();
+    for (const t of ["Nudges", "What Leo watches for", "Voice & sounds", "Personality & wisdom", "Always treated as work", "You & your data"]) {
       expect(screen.getByRole("heading", { name: t })).toBeInTheDocument();
     }
     expect(screen.getByRole("radio", { name: "Balanced" })).toHaveAttribute("aria-checked", "true");
@@ -64,7 +64,7 @@ describe("SettingsPage", () => {
   it("saves toggles, pace, personality and voice choices", async () => {
     const user = userEvent.setup();
     render(<SettingsPage profile={PROFILE} onEditGoals={vi.fn()} onStartOver={vi.fn()} />);
-    await screen.findByText("Sheru's settings");
+    await screen.findByText("Leo's settings");
     await user.click(screen.getByRole("switch", { name: "Speak out loud" }));
     expect(saveSettings).toHaveBeenLastCalledWith({ voice: true });
     await user.click(screen.getByRole("radio", { name: "Demo" }));
@@ -85,7 +85,7 @@ describe("SettingsPage", () => {
   it("commits a timing slider once, as a custom override, and can reset it", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     render(<SettingsPage profile={PROFILE} onEditGoals={vi.fn()} onStartOver={vi.fn()} />);
-    await screen.findByText("Sheru's settings");
+    await screen.findByText("Leo's settings");
     const slider = screen.getByRole("slider", { name: '"Wrong tab?" heads-up after' });
     fireEvent.change(slider, { target: { value: "8" } });
     fireEvent.change(slider, { target: { value: "9" } });
@@ -105,7 +105,7 @@ describe("SettingsPage", () => {
     vi.mocked(resetProfile).mockResolvedValue();
     const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
     render(<SettingsPage profile={PROFILE} onEditGoals={vi.fn()} onStartOver={onStartOver} />);
-    await screen.findByText("Sheru's settings");
+    await screen.findByText("Leo's settings");
     await user.click(screen.getByRole("button", { name: "Remove youtube.com" }));
     expect(saveSettings).toHaveBeenLastCalledWith({ overrides: {} });
     await user.click(screen.getByRole("button", { name: "Clear history" }));

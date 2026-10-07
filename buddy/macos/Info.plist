@@ -3,14 +3,14 @@
 <plist version="1.0">
 <dict>
   <key>CFBundleDevelopmentRegion</key><string>en</string>
-  <key>CFBundleDisplayName</key><string>Sheru</string>
-  <key>CFBundleName</key><string>Sheru</string>
-  <key>CFBundleExecutable</key><string>Sheru</string>
-  <key>CFBundleIdentifier</key><string>dev.sheru.app</string>
+  <key>CFBundleDisplayName</key><string>Viveka</string>
+  <key>CFBundleName</key><string>Viveka</string>
+  <key>CFBundleExecutable</key><string>Viveka</string>
+  <key>CFBundleIdentifier</key><string>dev.viveka.app</string>
   <key>CFBundleIconFile</key><string>AppIcon</string>
   <key>CFBundlePackageType</key><string>APPL</string>
-  <key>CFBundleShortVersionString</key><string>3.0.0</string>
-  <key>CFBundleVersion</key><string>3</string>
+  <key>CFBundleShortVersionString</key><string>3.1.0</string>
+  <key>CFBundleVersion</key><string>4</string>
   <key>LSMinimumSystemVersion</key><string>13.0</string>
   <key>LSUIElement</key><true/>
   <key>NSHighResolutionCapable</key><true/>
@@ -18,6 +18,6 @@
   <dict>
     <key>NSAllowsLocalNetworking</key><true/>
   </dict>
-  <key>NSHumanReadableCopyright</key><string>Sheru keeps everything on this Mac.</string>
+  <key>NSHumanReadableCopyright</key><string>Viveka keeps everything on this Mac.</string>
 </dict>
 </plist>

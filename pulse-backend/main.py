@@ -1,4 +1,4 @@
-"""Sheru backend (his brain + day analytics). Run: uvicorn main:app --port 8000"""
+"""Viveka backend (Leo's brain + day analytics). Run: uvicorn main:app --port 8000"""
 from __future__ import annotations
 
 import asyncio
@@ -30,7 +30,7 @@ from models import (
     StandupRequest,
     TimelineResponse,
 )
-from profile_store import Pace, ProfileIn, QuoteFrequency, SheruSettings
+from profile_store import Pace, ProfileIn, QuoteFrequency, LeoSettings
 from vivekananda import WisdomPicker
 from voice import SYSTEM_VOICE, VoiceUnavailable, effective_speed, get_voice
 
@@ -52,8 +52,8 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
         get_voice().shutdown()
 
 
-app = FastAPI(title="Sheru", version="3.0.0", lifespan=lifespan,
-              description="Sheru's brain: the focus coach, onboarding profile, settings, voice and day analytics.")
+app = FastAPI(title="Viveka", version="3.1.0", lifespan=lifespan,
+              description="Leo's brain: the focus coach, onboarding profile, settings, voice and day analytics.")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 if BUDDY_WEB.is_dir():
     app.mount("/buddy", StaticFiles(directory=BUDDY_WEB, html=True), name="buddy")
@@ -126,7 +126,7 @@ async def health() -> HealthResponse:
     )
 
 
-# ------------------------------------------------------------------- Sheru / coach
+# ------------------------------------------------------------------- Leo / coach
 class DesktopSampleIn(CamelModel):
     app: str = Field(default="", max_length=200)
     bundle_id: str = Field(default="", max_length=200)
@@ -250,7 +250,7 @@ def to_camel_key(key: str) -> str:
 
 
 class SettingsIn(CamelModel):
-    settings: Optional[SheruSettings] = None
+    settings: Optional[LeoSettings] = None
     pace: Optional[Pace] = None
     quotes: Optional[QuoteFrequency] = None
     voice: Optional[bool] = None  # speak out loud
@@ -262,7 +262,7 @@ def _settings_payload() -> dict[str, Any]:
     coach = get_coach()
     p = coach.profile
     if p is None:
-        raise NeedsProfile("Set up Sheru first (onboarding)")
+        raise NeedsProfile("Set up Leo first (onboarding)")
     return {
         "settings": p.settings.model_dump(by_alias=True),
         "pace": p.pace,
@@ -285,7 +285,7 @@ async def get_settings_view() -> dict[str, Any]:
 async def put_settings(body: SettingsIn) -> dict[str, Any]:
     coach = get_coach()
     if coach.profile is None:
-        raise NeedsProfile("Set up Sheru first (onboarding)")
+        raise NeedsProfile("Set up Leo first (onboarding)")
     fields: dict[str, Any] = {}
     if body.settings is not None:
         fields["settings"] = body.settings.model_dump()

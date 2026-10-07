@@ -64,7 +64,7 @@ class VoiceSettings(CamelModel):
     speak: SpeakScope = "important"
 
 
-class SheruSettings(CamelModel):
+class LeoSettings(CamelModel):
     timings: Timings = Field(default_factory=Timings)
     detectors: Detectors = Field(default_factory=Detectors)
     voice: VoiceSettings = Field(default_factory=VoiceSettings)
@@ -108,7 +108,7 @@ class ProfileIn(CamelModel):
 
 class Profile(ProfileIn):
     overrides: dict[str, VerdictKind] = Field(default_factory=dict)
-    settings: SheruSettings = Field(default_factory=SheruSettings)
+    settings: LeoSettings = Field(default_factory=LeoSettings)
     created_at: str = ""
     updated_at: str = ""
 
@@ -156,7 +156,7 @@ class ProfileStore:
         profile = Profile(
             **incoming.model_dump(),
             overrides=prev.overrides if prev else {},
-            settings=prev.settings if prev else SheruSettings(),
+            settings=prev.settings if prev else LeoSettings(),
             created_at=prev.created_at if prev and prev.created_at else now,
             updated_at=now,
         )

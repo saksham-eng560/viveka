@@ -1,7 +1,7 @@
-"""Sheru's voice: playful template lines plus local-LLM personalisation (Ollama).
+"""Leo's voice: playful template lines plus local-LLM personalisation (Ollama).
 
 Templates make every message instant and offline-safe. When Ollama is up, the coach
-asks the `sheru` model (a Modelfile layered on the base model, see ollama/Modelfile.sheru)
+asks the `viveka-leo` model (a Modelfile layered on the base model, see ollama/Modelfile.leo)
 for a fresher, personalised line and falls back to the template on any problem.
 """
 from __future__ import annotations
@@ -21,13 +21,13 @@ from config import Settings
 logger = logging.getLogger("pulse.persona")
 
 PERSONA = (
-    "You are Sheru, a tiny lion cub who lives on the user's desktop. You wear a little saffron turban and fold your "
+    "You are Leo, a tiny lion cub who lives on the user's desktop. You wear a little saffron turban and fold your "
     "paws like Swami Vivekananda in Chicago, because you grew up on his story of the lion cub raised among sheep. "
     "You are warm, playful and encouraging, never preachy, never shaming. You speak in short, simple sentences "
     "with gentle humour and at most one emoji. You care about the user's goals."
 )
 
-# How Sheru speaks, chosen in Settings (added to the persona for model-written lines and chat).
+# How Leo speaks, chosen in Settings (added to the persona for model-written lines and chat).
 PERSONALITIES = {
     "gentle": " Right now be extra gentle and calm: soft words, no teasing, few exclamation marks.",
     "playful": "",
@@ -41,7 +41,7 @@ def persona(personality: str = "playful") -> str:
 
 TEMPLATES: dict[str, list[str]] = {
     "greeting": [
-        "Namaste, {name}! 🙏 I'm Sheru. Today we chase: {goal}. I'll sit right here.",
+        "Namaste, {name}! 🙏 I'm Leo. Today we chase: {goal}. I'll sit right here.",
         "Hi {name}! Paws folded, turban on. Today's mission: {goal}.",
         "Namaste {name}! A lion cub reporting for duty. First up: {goal}.",
     ],
@@ -128,7 +128,7 @@ TEMPLATES: dict[str, list[str]] = {
         "Shh... I'll stay quiet for {minutes}. Holler if you need me.",
     ],
     "onboarding": [
-        "Hi! I'm Sheru. Tell me your name and goals on the dashboard so I can help you focus.",
+        "Hi! I'm Leo. Tell me your name and goals on the dashboard so I can help you focus.",
     ],
 }
 
@@ -168,7 +168,7 @@ class Brain:
         self._checked_at = 0.0
 
     async def _model(self) -> str:
-        # re-check now and then: the sheru model may be created after the backend starts
+        # re-check now and then: the viveka-leo model may be created after the backend starts
         if self._buddy_model_ok is None or (not self._buddy_model_ok and time.monotonic() - self._checked_at > 300):
             self._checked_at = time.monotonic()
             try:
@@ -277,11 +277,11 @@ class Brain:
 
     async def chat(self, message: str, history: list[dict[str, str]], context: str, timeout: float = 25.0,
                    personality: str = "playful") -> str:
-        convo = "\n".join(f"{'User' if h['role'] == 'user' else 'Sheru'}: {h['text']}" for h in history[-6:])
+        convo = "\n".join(f"{'User' if h['role'] == 'user' else 'Leo'}: {h['text']}" for h in history[-6:])
         system = (persona(personality) + " Answer in at most 3 short sentences. If asked about Swami Vivekananda, be accurate and "
                   "humble; do not invent quotes. You can suggest a focus sprint or a break. Context about the user: "
                   + context)
-        text = await self.generate(system, (convo + "\n" if convo else "") + f"User: {message}\nSheru:",
+        text = await self.generate(system, (convo + "\n" if convo else "") + f"User: {message}\nLeo:",
                                    timeout=timeout, num_predict=160, temperature=0.7)
         return clean_line(text, limit=420) if text else random.choice(_FALLBACK_CHAT)
 
@@ -290,7 +290,7 @@ _EMOJI = re.compile("[\U0001F300-\U0001FAFF\u2600-\u27BF]\uFE0F?")
 
 
 def _one_emoji(text: str) -> str:
-    """Sheru's style: at most one emoji per line (keep the first)."""
+    """Leo's style: at most one emoji per line (keep the first)."""
     seen = False
 
     def keep(m: re.Match[str]) -> str:
@@ -333,7 +333,7 @@ def brief(line: str, max_words: int = 26) -> str:
 
 
 def clean_line(text: str, limit: int = 220) -> str:
-    t = re.sub(r"^(Sheru|Assistant)\s*:\s*", "", _THINK.sub("", text).strip(), flags=re.I)
+    t = re.sub(r"^(Leo|Assistant)\s*:\s*", "", _THINK.sub("", text).strip(), flags=re.I)
     t = _one_emoji(t.strip().strip('"“”').strip())
     t = re.sub(r"\s+", " ", t)
     if len(t) > limit:

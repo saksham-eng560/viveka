@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 230" width="200" height="230" class="sheru mood-idle" role="img" aria-label="Sheru, a lion cub in a saffron turban">
-  <title>Sheru</title>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 230" width="200" height="230" class="leo mood-idle" role="img" aria-label="Leo, a lion cub in a saffron turban">
+  <title>Leo</title>
   <defs>
     <radialGradient id="sh-glow" cx="50%" cy="50%" r="50%">
       <stop offset="0%" stop-color="#FFE7A3" stop-opacity="0.95"/>
@@ -20,10 +20,10 @@
     </linearGradient>
   </defs>
   <style>
-    .sheru * { transform-box: view-box; }
-    .sheru .ol { stroke: #4A2A17; stroke-width: 3.6; stroke-linejoin: round; stroke-linecap: round; }
-    .sheru .ln { fill: none; stroke: #4A2A17; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
-    .sheru .alt, .sheru .fx { display: none; }
+    .leo * { transform-box: view-box; }
+    .leo .ol { stroke: #4A2A17; stroke-width: 3.6; stroke-linejoin: round; stroke-linecap: round; }
+    .leo .ln { fill: none; stroke: #4A2A17; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+    .leo .alt, .leo .fx { display: none; }
     .sh-all { animation: sh-breathe 3.6s ease-in-out infinite; transform-origin: 100px 214px; }
     #sh-head { animation: sh-bob 3.6s ease-in-out infinite; transform-origin: 100px 150px; }
     #sh-tail { animation: sh-tail 2.8s ease-in-out infinite; transform-origin: 128px 198px; }
@@ -32,7 +32,7 @@
     @keyframes sh-bob { 0%, 100% { transform: rotate(0deg) translateY(0); } 50% { transform: rotate(-1.8deg) translateY(1.2px); } }
     @keyframes sh-tail { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(-14deg); } }
     @keyframes sh-blink { 0%, 47%, 51%, 100% { transform: scaleY(1); } 49% { transform: scaleY(0.08); } }
-    @media (prefers-reduced-motion: reduce) { .sheru * { animation: none !important; } }
+    @media (prefers-reduced-motion: reduce) { .leo * { animation: none !important; } }
   </style>
 
   <!-- soft ground shadow -->

@@ -53,7 +53,7 @@ export interface ErrorBody {
   detail: string;
 }
 
-// ---- Sheru (coach) contract: pulse-backend/main.py, profile_store.py, coach.py
+// ---- Leo (coach) contract: pulse-backend/main.py, profile_store.py, coach.py
 export type Pace = "gentle" | "balanced" | "demo";
 export type QuoteFrequency = "often" | "sometimes" | "rarely" | "off";
 
@@ -157,7 +157,7 @@ export type Personality = "gentle" | "playful" | "coach";
 export type TimingKey = "headsup" | "distraction" | "repeat" | "stall" | "afk" | "snooze" | "breakLen";
 export type Timings = Record<TimingKey, number>;
 
-export interface SheruSettings {
+export interface LeoSettings {
   timings: Partial<Record<TimingKey, number | null>>;
   detectors: { headsup: boolean; detour: boolean; stall: boolean; hopping: boolean; streak: boolean; welcomeBack: boolean };
   voice: { voice: string; speed: number; pitch: number; volume: number; speak: "important" | "everything" };
@@ -176,7 +176,7 @@ export interface VoiceStatus {
 }
 
 export interface SettingsView {
-  settings: SheruSettings;
+  settings: LeoSettings;
   pace: Pace;
   quotes: QuoteFrequency;
   voice: boolean;
@@ -188,7 +188,7 @@ export interface SettingsView {
 }
 
 export interface SettingsPatch {
-  settings?: SheruSettings;
+  settings?: LeoSettings;
   pace?: Pace;
   quotes?: QuoteFrequency;
   voice?: boolean;

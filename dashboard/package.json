@@ -1,7 +1,7 @@
 {
-  "name": "sheru-dashboard",
+  "name": "viveka-dashboard",
   "private": true,
-  "version": "3.0.0",
+  "version": "3.1.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -9,8 +9,8 @@
     "typecheck": "tsc -b --noEmit",
     "test": "vitest run",
     "preview": "vite preview --port 3000 --strictPort",
-    "predev": "node scripts/sync-sheru.mjs",
-    "prebuild": "node scripts/sync-sheru.mjs"
+    "predev": "node scripts/sync-leo.mjs",
+    "prebuild": "node scripts/sync-leo.mjs"
   },
   "dependencies": {
     "@fontsource-variable/inter": "^5.3.0",

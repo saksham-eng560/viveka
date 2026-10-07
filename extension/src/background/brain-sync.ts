@@ -12,7 +12,7 @@ export interface TabInfo {
   incognito: boolean;
 }
 
-/** Report a tab to Sheru's brain and act on the reply (status, commands, overlay alerts). */
+/** Report a tab to Leo's brain and act on the reply (status, commands, overlay alerts). */
 export async function syncTab(tab: TabInfo, focused: boolean, now = Date.now()): Promise<BrainReply | null> {
   const reply = await reportTab(
     { url: tab.url, title: tab.title, audible: tab.audible, focused, incognito: tab.incognito, tabId: tab.id, browser: browserName() },

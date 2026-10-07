@@ -46,7 +46,7 @@ describe("brain reply parsing", () => {
   });
 });
 
-describe("tracker with Sheru's brain online", () => {
+describe("tracker with Leo's brain online", () => {
   it("uses the brain verdict and reports tab details", async () => {
     installChrome([{ id: 3, windowId: 1, url: "https://www.instagram.com/reels/", title: "Instagram", active: true, audible: true }]);
     const calls = stubBrain(() => brainReply());

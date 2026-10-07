@@ -1,4 +1,4 @@
-"""HTTP surface for onboarding, Sheru and the extension bridge."""
+"""HTTP surface for onboarding, Leo and the extension bridge."""
 from __future__ import annotations
 
 import datetime as dt
@@ -75,13 +75,13 @@ def test_actions(client: TestClient) -> None:
 @respx.mock
 def test_chat_uses_local_model_and_falls_back(client: TestClient) -> None:
     client.put("/api/profile", json=PROFILE)
-    respx.get(f"{OLLAMA}/api/tags").mock(return_value=httpx.Response(200, json={"models": [{"name": "sheru:latest"}]}))
+    respx.get(f"{OLLAMA}/api/tags").mock(return_value=httpx.Response(200, json={"models": [{"name": "viveka-leo:latest"}]}))
     route = respx.post(f"{OLLAMA}/api/generate").mock(
-        return_value=httpx.Response(200, json={"response": "Sheru: You can do it, Saksham! 🦁"}))
+        return_value=httpx.Response(200, json={"response": "Leo: You can do it, Saksham! 🦁"}))
     r = client.post("/api/buddy/chat", json={"text": "I feel lazy"}).json()
     assert r["reply"] == "You can do it, Saksham! 🦁"
     sent = route.calls.last.request.read().decode()
-    assert '"model":"sheru"' in sent.replace(" ", "") and "Crack DSA" in sent
+    assert '"model":"viveka-leo"' in sent.replace(" ", "") and "Crack DSA" in sent
     route.mock(side_effect=httpx.ConnectError("down"))
     assert client.post("/api/buddy/chat", json={"text": "hello"}).json()["reply"]
     assert "Vivekananda" in client.post("/api/buddy/chat", json={"text": "quote"}).json()["reply"]
@@ -95,7 +95,7 @@ def test_wisdom_endpoint(client: TestClient) -> None:
 
 def test_buddy_page_is_served(client: TestClient) -> None:
     r = client.get("/buddy/")
-    assert r.status_code == 200 and "Sheru" in r.text
+    assert r.status_code == 200 and "Leo" in r.text
 
 
 def test_local_activity_feeds_dashboard_summary(client: TestClient) -> None:
@@ -132,7 +132,7 @@ def test_persona_guard_rejects_wrong_address_and_extra_emojis() -> None:
     assert not acceptable_line("Hi Rahul, time to get back to graphs!", "Arjun Mehta")
     assert acceptable_line("Hey Arjun, back to graphs! 🦁", "Arjun Mehta")
     assert acceptable_line("Psst, the reels can wait. Lions code first!", "Arjun")
-    assert clean_line('Sheru: "Back to code, Arjun! 🦁 🐾 ✨"') == "Back to code, Arjun! 🦁"
+    assert clean_line('Leo: "Back to code, Arjun! 🦁 🐾 ✨"') == "Back to code, Arjun! 🦁"
 
 
 @respx.mock

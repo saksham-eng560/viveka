@@ -212,7 +212,7 @@ export function Onboarding({ initial, onDone, onCancel }: OnboardingProps) {
 
   return (
     <Shell mood={step === 0 ? "wave" : "idle"}>
-      <form onSubmit={submit} aria-label="Set up Sheru" className="flex flex-col gap-5">
+      <form onSubmit={submit} aria-label="Set up Leo" className="flex flex-col gap-5">
         <div className="flex items-center justify-between">
           <p className="text-xs font-semibold tracking-wide text-muted uppercase" aria-live="polite">
             Step {step + 1} of 3
@@ -227,7 +227,7 @@ export function Onboarding({ initial, onDone, onCancel }: OnboardingProps) {
         {step === 0 && (
           <>
             <div>
-              <h1 className="font-serif text-[28px] leading-9 font-semibold text-heading">{editing ? "Hello again!" : "Namaste! I'm Sheru."}</h1>
+              <h1 className="font-serif text-[28px] leading-9 font-semibold text-heading">{editing ? "Hello again!" : "Namaste! I'm Leo."}</h1>
               <p className="mt-1.5 text-[15px] text-ink">A little lion who sits on your desktop and helps you stay with what matters.</p>
             </div>
             <div className="grid grid-cols-[1fr_96px] gap-3">
@@ -317,7 +317,7 @@ export function Onboarding({ initial, onDone, onCancel }: OnboardingProps) {
                 </label>
                 <label className="flex cursor-pointer items-center gap-2 text-sm text-ink">
                   <input type="checkbox" checked={form.voice} onChange={(e) => set("voice", e.target.checked)} className="h-4 w-4 accent-[var(--lh-saffron)]" />
-                  Let Sheru speak out loud
+                  Let Leo speak out loud
                 </label>
               </div>
             </div>
@@ -344,7 +344,7 @@ export function Onboarding({ initial, onDone, onCancel }: OnboardingProps) {
             )}
           </div>
           <Button type="submit" size="lg" disabled={!canNext || saving}>
-            {step < 2 ? "Next" : saving ? "Waking Sheru…" : editing ? "Save" : "Meet Sheru"}
+            {step < 2 ? "Next" : saving ? "Waking Leo…" : editing ? "Save" : "Meet Leo"}
           </Button>
         </div>
       </form>
@@ -358,13 +358,13 @@ function Shell({ children, mood }: { children: ReactNode; mood: "wave" | "idle" 
       <div className="flex w-full max-w-3xl flex-col items-center gap-6 md:flex-row md:items-start">
         <div className="shrink-0 pt-4 text-center" aria-hidden="true">
           <img
-            src="/sheru.svg"
+            src="/leo.svg"
             alt=""
             width={150}
             height={172}
-            className={cn("mx-auto", mood === "wave" && "animate-[sheru-hop_2.6s_ease-in-out_infinite]", mood === "celebrate" && "animate-[sheru-hop_0.9s_ease-in-out_3]")}
+            className={cn("mx-auto", mood === "wave" && "animate-[leo-hop_2.6s_ease-in-out_infinite]", mood === "celebrate" && "animate-[leo-hop_0.9s_ease-in-out_3]")}
           />
-          <p className="mt-2 font-serif text-sm text-muted italic">Sheru</p>
+          <p className="mt-2 font-serif text-sm text-muted italic">Leo</p>
         </div>
         <Card className="w-full p-6 sm:p-8">{children}</Card>
       </div>

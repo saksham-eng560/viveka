@@ -25,7 +25,7 @@ export function StatusBar({ health, error }: { health: HealthResponse | null; er
       </div>
     );
   }
-  const LABELS = { auto: "Auto data", aw: "AW data", local: "Sheru data", sample: "Sample data" } as const;
+  const LABELS = { auto: "Auto data", aw: "AW data", local: "Viveka data", sample: "Sample data" } as const;
   const sourceLabel = health ? LABELS[health.dataSource] : "Data";
   return (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-1" role="status" aria-label="Service status">

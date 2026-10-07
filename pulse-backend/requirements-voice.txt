@@ -1,2 +1,2 @@
-# Sheru's natural voice (optional; ./setup.sh installs it, Sheru falls back to the macOS voice without it)
+# Leo's natural voice (optional; ./setup.sh installs it, Leo falls back to the macOS voice without it)
 kokoro-onnx==0.6.*

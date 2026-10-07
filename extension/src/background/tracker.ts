@@ -22,7 +22,7 @@ interface TrackerRuntime {
   lastProbeAt: number;
   lowTimer: ReturnType<typeof setTimeout> | null;
   refreshing: Promise<void> | null;
-  /** Quick re-checks after landing on a distracting tab, so Sheru's "wrong tab?" note shows within seconds. */
+  /** Quick re-checks after landing on a distracting tab, so Leo's "wrong tab?" note shows within seconds. */
   followUps: ReturnType<typeof setTimeout>[];
 }
 
@@ -159,7 +159,7 @@ async function applyTab(tab: ActiveTab, force: boolean): Promise<void> {
     prev && prev.tabId === tab.id && stripHashUrl(prev.url) === stripHashUrl(tab.url) && prev.title === tab.title;
   if (unchanged && !force) return;
 
-  // Sheru's brain judges against the onboarding goals when it is running; otherwise classify locally.
+  // Leo's brain judges against the onboarding goals when it is running; otherwise classify locally.
   const reply = await syncTab(tab, !isInactive());
   rt.followUps.forEach(clearTimeout);
   rt.followUps = [];
@@ -238,7 +238,7 @@ export function refreshActiveTab(opts: { force?: boolean } = {}): Promise<void> 
   return rt.refreshing;
 }
 
-/** Keep Sheru's brain up to date with the active tab (also delivers its alerts and commands). */
+/** Keep Leo's brain up to date with the active tab (also delivers its alerts and commands). */
 async function pingBrain(cur: CurrentTab | null, focused: boolean): Promise<void> {
   if (!cur) return;
   try {

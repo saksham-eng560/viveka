@@ -1,4 +1,4 @@
-"""Sheru's voice: natural on-device speech.
+"""Leo's voice: natural on-device speech.
 
 Engines, best first:
   * neural  Kokoro-82M (Apache-2.0) via kokoro-onnx, fp16 model in .models/ (fetched by setup).
@@ -31,7 +31,7 @@ from concurrent.futures import Future, ThreadPoolExecutor
 from pathlib import Path
 from typing import Optional
 
-logger = logging.getLogger("sheru.voice")
+logger = logging.getLogger("viveka.voice")
 
 MODEL_FILE = "kokoro-v1.0.fp16.onnx"
 VOICES_FILE = "voices-v1.0.bin"
@@ -53,7 +53,7 @@ VOICE_CHOICES: tuple[tuple[str, str], ...] = (
     (SYSTEM_VOICE, "macOS system voice"),
 )
 
-# Messages Sheru reads out when "speak: important" is chosen (the buddy page uses the same set).
+# Messages Leo reads out when "speak: important" is chosen (the buddy page uses the same set).
 IMPORTANT_KINDS = frozenset({"greeting", "nudge", "distraction", "stall", "break", "back", "info", "chat"})
 
 _EMOJI = re.compile("[\U0001F300-\U0001FAFF☀-➿️‍]")
@@ -66,7 +66,7 @@ class VoiceUnavailable(RuntimeError):
 
 # ----------------------------------------------------------------------------- text
 def speech_text(kind: str, title: str, text: str) -> str:
-    """What Sheru says out loud for a message (titles help: "Wrong tab? Hmm, ...")."""
+    """What Leo says out loud for a message (titles help: "Wrong tab? Hmm, ...")."""
     if kind == "quote":
         spoken = f"Swamiji says: {text}"
     elif kind == "fact":
@@ -123,8 +123,8 @@ def _short_espeak_data(data_path: str) -> str:
     (A symlink is not enough: phonemizer resolves it back to the long path.)"""
     if len(data_path) <= 120:
         return data_path
-    for base in (Path.home() / "Library" / "Caches" / "sheru", Path.home() / ".cache" / "sheru",
-                 Path(tempfile.gettempdir()) / "sheru"):
+    for base in (Path.home() / "Library" / "Caches" / "viveka", Path.home() / ".cache" / "viveka",
+                 Path(tempfile.gettempdir()) / "viveka"):
         target = base / "espeak-ng-data"
         if len(str(target)) > 120:
             continue
@@ -147,7 +147,7 @@ def _say_wav(text: str, speed: float) -> bytes:
     voices = subprocess.run(["say", "-v", "?"], capture_output=True, text=True, timeout=10).stdout
     name = next((v for v in ("Samantha", "Karen", "Daniel", "Rishi") if re.search(rf"^{v}\s", voices, re.M)), None)
     with tempfile.TemporaryDirectory() as tmp:
-        out = Path(tmp) / "sheru.wav"
+        out = Path(tmp) / "speech.wav"
         cmd = ["say", "-r", str(int(185 * speed)), "-o", str(out), "--file-format=WAVE", "--data-format=LEI16@22050"]
         if name:
             cmd[1:1] = ["-v", name]
@@ -159,7 +159,7 @@ def _say_wav(text: str, speed: float) -> bytes:
 class Voice:
     def __init__(self, models_dir: str | Path, cache_size: int = 96) -> None:
         self.models_dir = Path(models_dir)
-        self._pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix="sheru-voice")  # espeak is not thread-safe
+        self._pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix="viveka-voice")  # espeak is not thread-safe
         self._kokoro: object = None
         self._load_error = ""
         self._load_failed_at = 0.0

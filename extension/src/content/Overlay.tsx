@@ -10,7 +10,7 @@ interface OverlayProps {
   onAction: (action: NudgeActionKind) => void;
 }
 
-// Friendly, light-only palette shared with Sheru's desktop bubble.
+// Friendly, light-only palette shared with Leo's desktop bubble.
 const C = {
   cream: "#FFF9EE",
   alert: "#FFF2E8",
@@ -27,9 +27,9 @@ const SERIF = '"Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif'
 
 const KNOWN_ACTIONS = new Set<NudgeActionKind>(["dismiss", "back_to_work", "snooze", "its_work"]);
 
-function sheruUrl(): string | null {
+function leoUrl(): string | null {
   try {
-    return chrome.runtime.getURL("sheru.svg");
+    return chrome.runtime.getURL("leo.svg");
   } catch {
     return null;
   }
@@ -57,7 +57,7 @@ export function Overlay({ payload, onAction }: OverlayProps) {
   const brain = payload?.brain;
   const mins = payload && !brain ? minutesLeftText(payload.minutesLeft) : null;
   const quote = payload && !brain ? quoteFor("nudge", `${payload.hostname}|${payload.goal}|${payload.score}`) : null;
-  const img = sheruUrl();
+  const img = leoUrl();
   const actions: { id: NudgeActionKind; label: string }[] = brain
     ? brain.actions.filter((a): a is { id: NudgeActionKind; label: string } => KNOWN_ACTIONS.has(a.id as NudgeActionKind))
     : [
@@ -134,7 +134,7 @@ export function Overlay({ payload, onAction }: OverlayProps) {
             </button>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginRight: 18 }}>
               <span style={{ font: `800 12.5px/1.2 ${FONT}`, color: C.saffronDark }}>
-                {brain ? brain.title || "Psst!" : "Sheru noticed"}
+                {brain ? brain.title || "Psst!" : "Leo noticed"}
               </span>
               {!brain && (
                 <span

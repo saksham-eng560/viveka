@@ -1,4 +1,4 @@
-"""Local SQLite log of what was on screen (segments) and what Sheru said (alerts)."""
+"""Local SQLite log of what was on screen (segments) and what Leo said (alerts)."""
 from __future__ import annotations
 
 import datetime as dt
@@ -58,13 +58,16 @@ class Segment:
 
 class ActivityStore:
     def __init__(self, data_dir: str | Path) -> None:
-        self.path = Path(data_dir) / "sheru.db"
-        legacy = Path(data_dir) / "lighthouse.db"  # name used before the project became Sheru
-        if legacy.exists() and not self.path.exists():
-            try:
-                legacy.replace(self.path)
-            except OSError:
-                self.path = legacy
+        self.path = Path(data_dir) / "viveka.db"
+        if not self.path.exists():
+            for older in ("sheru.db", "lighthouse.db"):  # names from before the project was called Viveka
+                legacy = Path(data_dir) / older
+                if legacy.exists():
+                    try:
+                        legacy.replace(self.path)
+                    except OSError:
+                        self.path = legacy
+                    break
         self._conn: Optional[sqlite3.Connection] = None
 
     @property

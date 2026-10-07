@@ -45,7 +45,7 @@ describe("Onboarding", () => {
     await user.click(screen.getByRole("button", { name: "✓ YouTube" })); // preselected; untick
     await user.click(screen.getByRole("button", { name: "Reddit" }));
     await user.click(screen.getByRole("radio", { name: /Demo/ }));
-    await user.click(screen.getByRole("button", { name: "Meet Sheru" }));
+    await user.click(screen.getByRole("button", { name: "Meet Leo" }));
 
     await waitFor(() => expect(saveProfile).toHaveBeenCalledTimes(1));
     expect(vi.mocked(saveProfile).mock.calls[0]![0]).toEqual({
@@ -64,7 +64,7 @@ describe("Onboarding", () => {
     await user.type(screen.getByPlaceholderText("Your name"), "A{Enter}");
     await user.type(await screen.findByLabelText("Add a goal"), "Ship it{Enter}");
     await user.click(screen.getByRole("button", { name: "Next" }));
-    await user.click(await screen.findByRole("button", { name: "Meet Sheru" }));
+    await user.click(await screen.findByRole("button", { name: "Meet Leo" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("Add at least one goal");
   });
 });

@@ -1,4 +1,4 @@
-"""The coach engine behind Sheru: turns screen signals into gentle, well-timed messages.
+"""The coach engine behind Leo: turns screen signals into gentle, well-timed messages.
 
 Inputs
   * desktop samples from the macOS buddy app every ~2s: frontmost app, window title,
@@ -32,7 +32,7 @@ from activity_store import ActivityStore, Segment
 from catalog import Activity, Verdict, domain_of, domain_from_browser_title, heuristic_verdict, is_browser, is_system
 from config import Settings
 from persona import Brain, fmt_minutes, template
-from profile_store import Profile, ProfileStore, SheruSettings
+from profile_store import Profile, ProfileStore, LeoSettings
 from vivekananda import Wisdom, WisdomPicker
 from voice import IMPORTANT_KINDS, Voice, effective_speed, speech_chunks, speech_text
 
@@ -44,7 +44,7 @@ class Pace:
     distraction: float  # seconds off-goal before the first alert
     repeat: float  # seconds between follow-up alerts
     stall: float  # seconds without typing (in a writing app) per nudge level
-    afk: float  # seconds without any input before Sheru naps
+    afk: float  # seconds without any input before Leo naps
     snooze: float  # "2 more minutes" length
     storm_window: float
     storm_count: int
@@ -102,7 +102,7 @@ class Message:
     level: int = 0
     label: str = ""
     ts: float = 0.0
-    speech: list[str] = field(default_factory=list)  # what Sheru says out loud, in sentence chunks
+    speech: list[str] = field(default_factory=list)  # what Leo says out loud, in sentence chunks
 
     def public(self) -> dict[str, Any]:
         d = asdict(self)
@@ -185,9 +185,9 @@ class Coach:
         return self.profiles.load()
 
     @property
-    def prefs(self) -> SheruSettings:
+    def prefs(self) -> LeoSettings:
         p = self.profile
-        return p.settings if p is not None else SheruSettings()
+        return p.settings if p is not None else LeoSettings()
 
     @property
     def pace(self) -> Pace:
@@ -219,7 +219,7 @@ class Coach:
         if not self.buddy_online(now):
             self.tick()  # no desktop app: the browser drives the engine
         alert = None
-        if not self.buddy_online(now):  # no desktop app: the extension shows Sheru's messages inside the page
+        if not self.buddy_online(now):  # no desktop app: the extension shows Leo's messages inside the page
             alert = self._find(self.active_alert) if self.active_alert else None
             if alert is None and self.verdict is not None and self.verdict.kind == "distraction":
                 heads_up = next((m for m in reversed(self.messages) if m.kind == "nudge"), None)
@@ -757,7 +757,7 @@ class Coach:
             reply = (await self.brain.chat(text, self.chat_history, ctx, personality=self.prefs.personality)
                      if self.prefs.use_ai else "My thinking cap is switched off in Settings, but I'm still cheering for you! "
                      "Click me for a Swamiji quote.")
-        self.chat_history += [{"role": "user", "text": text}, {"role": "sheru", "text": reply}]
+        self.chat_history += [{"role": "user", "text": text}, {"role": "leo", "text": reply}]
         self.chat_history = self.chat_history[-12:]
         speech = speech_chunks(speech_text("chat", "", reply))
         self._prefetch_speech("chat", speech)

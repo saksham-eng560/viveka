@@ -1,6 +1,6 @@
-# Ollama + Sheru's backend (his brain). aw-server (ActivityWatch) runs on the host, not in a container.
-# Sheru's desktop app and the browser extension run on the host and talk to http://localhost:8000.
-# The "sheru" persona model is not created here; the backend falls back to LLM_MODEL with the same persona prompt.
+# Ollama + Viveka's backend (Leo's brain). aw-server (ActivityWatch) runs on the host, not in a container.
+# Leo's desktop app and the browser extension run on the host and talk to http://localhost:8000.
+# The "viveka-leo" persona model is not created here; the backend falls back to LLM_MODEL with the same persona prompt.
 # aw-server must listen on an address reachable from the container (not 127.0.0.1 only),
 # e.g. set address = "0.0.0.0" in aw-server-rust config.toml. Otherwise, with DATA_SOURCE=auto,
 # the backend logs a warning and serves built-in sample data (source: "sample").
@@ -27,11 +27,11 @@ services:
       - AW_BUCKET_PREFIX=${AW_BUCKET_PREFIX:-aw-watcher-web-lighthouse}
       - DATA_SOURCE=${DATA_SOURCE:-auto}
       - STANDUP_FALLBACK=${STANDUP_FALLBACK:-template}
-      - SHERU_DATA_DIR=/data
+      - VIVEKA_DATA_DIR=/data
       - LLM_CLASSIFY=${LLM_CLASSIFY:-on}
     volumes:
-      - sheru_data:/data                 # profile.json + sheru.db survive container restarts
-      - ./buddy/web:/buddy/web:ro        # Sheru's UI, served at /buddy
+      - viveka_data:/data                 # profile.json + viveka.db survive container restarts
+      - ./buddy/web:/buddy/web:ro        # Leo's UI, served at /buddy
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
@@ -40,4 +40,4 @@ services:
 
 volumes:
   ollama_data:
-  sheru_data:
+  viveka_data:

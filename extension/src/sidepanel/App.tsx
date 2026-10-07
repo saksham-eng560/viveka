@@ -171,7 +171,7 @@ function ViewTabs({ view, onChange }: { view: View; onChange: (v: View) => void 
     refs.current[target.id]?.focus();
   };
   return (
-    <div role="tablist" aria-label="Sheru views" className="flex gap-1 rounded-[10px] border border-line bg-surface p-1">
+    <div role="tablist" aria-label="Viveka views" className="flex gap-1 rounded-[10px] border border-line bg-surface p-1">
       {VIEWS.map((v) => {
         const selected = v.id === view;
         return (
@@ -200,17 +200,17 @@ function ViewTabs({ view, onChange }: { view: View; onChange: (v: View) => void 
   );
 }
 
-/** Sheru's brain (backend coach): goals from onboarding and what it thinks of the current tab. */
+/** Leo's brain (backend coach): goals from onboarding and what it thinks of the current tab. */
 function BrainCard({ state }: { state: AppStateSnapshot }) {
   const b = state.brain;
   if (!b?.online) return null;
   const verdict = b.verdict === "focus" ? "on track" : b.verdict === "distraction" ? "a detour" : "neutral";
   return (
     <Card className="flex items-start gap-3 py-3" >
-      <img src="/sheru.svg" alt="" width={44} height={50} className="shrink-0" />
+      <img src="/leo.svg" alt="" width={44} height={50} className="shrink-0" />
       <div className="min-w-0 text-xs leading-[18px]" data-testid="brain-card">
         <p className="m-0 text-sm font-semibold text-heading">
-          {b.firstName ? `Sheru is with you, ${b.firstName}` : "Sheru is with you"}
+          {b.firstName ? `Leo is with you, ${b.firstName}` : "Leo is with you"}
         </p>
         {b.label && (
           <p className="m-0 text-muted">
@@ -248,7 +248,7 @@ export function App() {
   if (!state) {
     return (
       <main className="p-4 text-sm text-muted">
-        {error ? `Could not reach Sheru's background: ${error}` : "Loading…"}
+        {error ? `Could not reach Viveka's background: ${error}` : "Loading…"}
       </main>
     );
   }
@@ -261,7 +261,7 @@ export function App() {
       <header className="flex items-center gap-2.5">
         <LogoMark />
         <div className="min-w-0">
-          <h1 className="m-0 font-serif text-xl font-semibold leading-[26px] text-heading">Sheru</h1>
+          <h1 className="m-0 font-serif text-xl font-semibold leading-[26px] text-heading">Viveka</h1>
           <p className="m-0 text-[11px] leading-[15px] text-muted">A quiet companion for focused work</p>
         </div>
       </header>

@@ -1,16 +1,16 @@
 #!/usr/bin/env node
-// Open a browser window with the Sheru extension already installed, then stay alive
+// Open a browser window with the Viveka extension already installed, then stay alive
 // as long as that browser runs (start.sh tracks this process as the "browser" service).
 //
 // Why a launcher: Google Chrome 137+ ignores --load-extension, and installing into someone's
 // everyday profile is (rightly) impossible without clicking through chrome://extensions.
-// So we start the browser with its own Sheru profile and install the unpacked extension
+// So we start the browser with its own Viveka profile and install the unpacked extension
 // through the DevTools protocol (Extensions.loadUnpacked over --remote-debugging-pipe).
 // Chrome closes the pipe-connected browser when this process exits, so we keep running.
 //
 // Usage: node scripts/launch-browser.mjs --ext extension/dist --profile .run/browser-profile --url http://localhost:3000
-// Env:   SHERU_BROWSER=chrome|brave|edge|chromium|<path to binary>   (default: first one installed;
-//        the older LIGHTHOUSE_BROWSER name still works)
+// Env:   VIVEKA_BROWSER=chrome|brave|edge|chromium|<path to binary>   (default: first one installed;
+//        the older SHERU_BROWSER and LIGHTHOUSE_BROWSER names still work)
 import { spawn } from "node:child_process";
 import { existsSync, mkdirSync } from "node:fs";
 import { homedir } from "node:os";
@@ -31,10 +31,10 @@ const CANDIDATES = {
 };
 
 function pickBrowser() {
-  const want = (process.env.SHERU_BROWSER ?? process.env.LIGHTHOUSE_BROWSER ?? "").trim();
+  const want = (process.env.VIVEKA_BROWSER ?? process.env.SHERU_BROWSER ?? process.env.LIGHTHOUSE_BROWSER ?? "").trim();
   if (want && !CANDIDATES[want.toLowerCase()]) {
     if (existsSync(want)) return { name: "custom", bin: want };
-    throw new Error(`SHERU_BROWSER=${want} is not a known browser or an existing path`);
+    throw new Error(`VIVEKA_BROWSER=${want} is not a known browser or an existing path`);
   }
   const order = want ? [want.toLowerCase()] : ["chrome", "brave", "edge", "chromium"];
   for (const name of order) {
@@ -62,7 +62,7 @@ const flags = [
   "--disable-search-engine-choice-screen",
   "--window-size=1280,860",
 ];
-if (process.env.SHERU_BROWSER_HEADLESS || process.env.LIGHTHOUSE_BROWSER_HEADLESS) flags.push("--headless=new"); // tests / CI
+if (process.env.VIVEKA_BROWSER_HEADLESS || process.env.SHERU_BROWSER_HEADLESS || process.env.LIGHTHOUSE_BROWSER_HEADLESS) flags.push("--headless=new"); // tests / CI
 log(`starting ${name}: ${bin}`);
 const child = spawn(bin, flags, { stdio: ["ignore", "ignore", "pipe", "pipe", "pipe"] });
 const toBrowser = child.stdio[3];
@@ -136,7 +136,7 @@ child.on("exit", (code) => {
 
 try {
   const { id } = await cdp("Extensions.loadUnpacked", { path: EXT });
-  log(`Sheru extension installed (${id}) from ${EXT}`);
+  log(`Viveka extension installed (${id}) from ${EXT}`);
 } catch (e) {
   log(`could not install the extension automatically: ${e.message}`);
   log(`load it by hand: chrome://extensions -> Developer mode -> Load unpacked -> ${EXT}`);

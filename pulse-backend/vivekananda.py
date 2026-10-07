@@ -1,4 +1,4 @@
-"""Swami Vivekananda: quotes and facts Sheru shares between nudges.
+"""Swami Vivekananda: quotes and facts Leo shares between nudges.
 
 Quotes are kept close to The Complete Works of Swami Vivekananda (Advaita Ashrama);
 popular internet misattributions are deliberately left out. Facts are short and
@@ -147,7 +147,7 @@ FACTS: tuple[Wisdom, ...] = (
            "discriminating wisdom.", "Sanskrit"),
     Wisdom("f-sheep", "fact",
            "He loved telling the story of a lion cub raised among sheep that bleated and ate grass — "
-           "until another lion showed it its reflection. That's where I, Sheru, come from!",
+           "until another lion showed it its reflection. That's where I, Leo, come from!",
            "Parable from his lectures"),
     Wisdom("f-age", "fact",
            "He passed away on 4 July 1902 at Belur Math, only 39 years old — and changed how the world "

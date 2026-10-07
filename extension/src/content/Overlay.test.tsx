@@ -82,7 +82,7 @@ describe("Overlay", () => {
   });
 });
 
-describe("Overlay with a message from Sheru's brain", () => {
+describe("Overlay with a message from Leo's brain", () => {
   const brainPayload: NudgePayload = {
     ...payload,
     brain: {
@@ -91,7 +91,7 @@ describe("Overlay with a message from Sheru's brain", () => {
     },
   };
 
-  it("shows Sheru's own words and only known buttons, without the legacy score and quote", async () => {
+  it("shows Leo's own words and only known buttons, without the legacy score and quote", async () => {
     const { shadow, onAction } = await mountInShadow(brainPayload);
     const text = shadow.textContent ?? "";
     expect(text).toContain("Psst!");
@@ -105,8 +105,8 @@ describe("Overlay with a message from Sheru's brain", () => {
     expect(onAction.mock.calls).toEqual([["snooze"], ["dismiss"]]);
   });
 
-  it("shows Sheru's picture from the extension", async () => {
+  it("shows Leo's picture from the extension", async () => {
     const { shadow } = await mountInShadow(brainPayload);
-    expect(shadow.querySelector("img")?.getAttribute("src")).toContain("sheru.svg");
+    expect(shadow.querySelector("img")?.getAttribute("src")).toContain("leo.svg");
   });
 });

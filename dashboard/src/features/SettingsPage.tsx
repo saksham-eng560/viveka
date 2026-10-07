@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 import { Button } from "../components/ui/button";
 import { Card } from "../components/ui/card";
 import { apiErrorMessage, clearHistory, getSettings, resetProfile, saveSettings, voicePreview } from "../lib/api";
-import type { Pace, Personality, Profile, QuoteFrequency, SettingsPatch, SettingsView, SheruSettings, TimingKey } from "../lib/types";
+import type { Pace, Personality, Profile, QuoteFrequency, SettingsPatch, SettingsView, LeoSettings, TimingKey } from "../lib/types";
 import { cn } from "../lib/utils";
 
 // ------------------------------------------------------------------------- bits
@@ -117,12 +117,12 @@ const TIMINGS: { key: TimingKey; label: string; hint: string; min: number; max: 
   { key: "distraction", label: "First detour alert after", hint: "The stronger alert with Back to work / 2 more min.", min: 5, max: 600, step: 5 },
   { key: "repeat", label: "Follow-up alerts every", hint: "If you stay on the detour.", min: 20, max: 1800, step: 10 },
   { key: "stall", label: "Writing-stall step", hint: "Silence in a writing app before each of the three stall nudges.", min: 10, max: 600, step: 5 },
-  { key: "afk", label: "Nap when idle for", hint: "No keyboard or mouse: Sheru naps and stays quiet.", min: 60, max: 1800, step: 30 },
+  { key: "afk", label: "Nap when idle for", hint: "No keyboard or mouse: Leo naps and stays quiet.", min: 60, max: 1800, step: 30 },
   { key: "snooze", label: '"2 more min" snooze', hint: "How long alerts pause when you snooze.", min: 10, max: 900, step: 5 },
   { key: "breakLen", label: "Break length", hint: '"Take a break" from an alert.', min: 60, max: 1800, step: 30 },
 ];
 
-const DETECTORS: { key: keyof SheruSettings["detectors"]; label: string; hint: string }[] = [
+const DETECTORS: { key: keyof LeoSettings["detectors"]; label: string; hint: string }[] = [
   { key: "headsup", label: '"Wrong tab?" heads-up', hint: "A soft note a few seconds after you land somewhere off-goal." },
   { key: "detour", label: "Detour alerts", hint: "Stronger alerts if you stay off-goal." },
   { key: "stall", label: "Writing stalls", hint: 'Two gentle nudges, then "you seem distracted" when typing stops.' },
@@ -185,7 +185,7 @@ export function SettingsPage({ profile, onEditGoals, onStartOver }: {
   }
 
   const s = view.settings;
-  const update = (next: Partial<SheruSettings>) => {
+  const update = (next: Partial<LeoSettings>) => {
     const cur = latest.current ?? view;
     const merged = { ...cur.settings, ...next };
     latest.current = { ...cur, settings: merged };
@@ -204,7 +204,7 @@ export function SettingsPage({ profile, onEditGoals, onStartOver }: {
     try {
       const blob = await voicePreview(`Namaste, ${profile.name.split(" ")[0]}! Hmm, wrong tab? Let's hop back to your goal.`, v.voice, v.speed, v.pitch);
       const audio = new Audio(URL.createObjectURL(blob));
-      (audio as HTMLAudioElement & { preservesPitch?: boolean }).preservesPitch = false; // pitch up like Sheru's page does
+      (audio as HTMLAudioElement & { preservesPitch?: boolean }).preservesPitch = false; // pitch up like Leo's page does
       audio.playbackRate = 1 + v.pitch / 100;
       audio.volume = v.volume;
       audio.onended = () => setPreviewing(false);
@@ -219,7 +219,7 @@ export function SettingsPage({ profile, onEditGoals, onStartOver }: {
     <div className="space-y-6" data-testid="settings-page">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="font-serif text-[26px] leading-8 font-semibold text-heading">Sheru's settings</h1>
+          <h1 className="font-serif text-[26px] leading-8 font-semibold text-heading">Leo's settings</h1>
           <p className="text-sm text-muted">Changes apply right away.</p>
         </div>
         <p className="text-sm font-semibold text-muted" role="status" aria-live="polite">
@@ -229,7 +229,7 @@ export function SettingsPage({ profile, onEditGoals, onStartOver }: {
       {error && <p role="alert" className="rounded-(--lh-radius) bg-tint-maroon p-3 text-sm text-heading">{error}</p>}
 
       <Section title="Nudges" hint="Pick a pace, then fine-tune any timing.">
-        <Row label="Pace" hint="Demo is very fast, made for showing Sheru to others.">
+        <Row label="Pace" hint="Demo is very fast, made for showing Leo to others.">
           <Segmented<Pace> label="Pace" value={view.pace} onChange={(pace) => void save({ pace })}
             options={[{ id: "gentle", label: "Gentle" }, { id: "balanced", label: "Balanced" }, { id: "demo", label: "Demo" }]} />
         </Row>
@@ -246,7 +246,7 @@ export function SettingsPage({ profile, onEditGoals, onStartOver }: {
         )}
       </Section>
 
-      <Section title="What Sheru watches for">
+      <Section title="What Leo watches for">
         {DETECTORS.map((d) => (
           <Row key={d.key} label={d.label} hint={d.hint}>
             <Switch label={d.label} checked={s.detectors[d.key]} onChange={(on) => update({ detectors: { ...s.detectors, [d.key]: on } })} />
@@ -256,9 +256,9 @@ export function SettingsPage({ profile, onEditGoals, onStartOver }: {
 
       <Section title="Voice & sounds" hint={
         engine.engine === "neural" ? "Natural voice, generated on this Mac. Nothing is sent anywhere."
-          : engine.engine === "system" ? "Using the macOS voice. For Sheru's natural voice run ./setup.sh (one-time ~200 MB download)."
+          : engine.engine === "system" ? "Using the macOS voice. For Leo's natural voice run ./setup.sh (one-time ~200 MB download)."
             : "No speech engine available on this computer."}>
-        <Row label="Speak out loud" hint="Sheru reads his messages aloud.">
+        <Row label="Speak out loud" hint="Leo reads his messages aloud.">
           <Switch label="Speak out loud" checked={view.voice} onChange={(on) => void save({ voice: on })} />
         </Row>
         <Row label="Voice">
@@ -304,10 +304,10 @@ export function SettingsPage({ profile, onEditGoals, onStartOver }: {
           <Segmented<QuoteFrequency> label="Quote frequency" value={view.quotes} onChange={(quotes) => void save({ quotes })}
             options={[{ id: "often", label: "Often" }, { id: "sometimes", label: "Sometimes" }, { id: "rarely", label: "Rarely" }, { id: "off", label: "Off" }]} />
         </Row>
-        <Row label="Use the local model" hint="Judges unclear tabs (e.g. YouTube) and writes Sheru's lines. Off: rules and written lines only.">
+        <Row label="Use the local model" hint="Judges unclear tabs (e.g. YouTube) and writes Leo's lines. Off: rules and written lines only.">
           <Switch label="Use the local model" checked={s.useAi} onChange={(useAi) => update({ useAi })} />
         </Row>
-        <Row label="Status label on hover" hint='Shows "✓ On track · VS Code" when you hover over Sheru.'>
+        <Row label="Status label on hover" hint='Shows "✓ On track · VS Code" when you hover over Leo.'>
           <Switch label="Status label on hover" checked={s.showStatusChip} onChange={(showStatusChip) => update({ showStatusChip })} />
         </Row>
       </Section>
@@ -339,7 +339,7 @@ export function SettingsPage({ profile, onEditGoals, onStartOver }: {
         </Row>
         <Row label="Clear activity history" hint="Deletes the logged timeline and nudges. Keeps your profile and settings.">
           <Button variant="outline" size="sm" onClick={() => {
-            if (window.confirm("Delete all of Sheru's activity history? This cannot be undone.")) {
+            if (window.confirm("Delete all of Leo's activity history? This cannot be undone.")) {
               clearHistory().then(() => setStatus("saved")).catch((e: unknown) => setError(apiErrorMessage(e)));
             }
           }}>Clear history</Button>

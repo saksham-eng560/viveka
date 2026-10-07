@@ -38,7 +38,7 @@ if [ ! -x "$VENV_DIR/bin/pytest" ]; then
 fi
 run "backend tests" "$BACKEND_DIR" .venv/bin/pytest -q
 
-# Sheru's desktop app: type-check the Swift source (no rebuild, so macOS permissions are kept)
+# Leo's desktop app: type-check the Swift source (no rebuild, so macOS permissions are kept)
 if [ "$(uname -s)" = "Darwin" ] && have swiftc; then
   run "buddy (swift)" "$BUDDY_DIR" swiftc -typecheck -swift-version 5 -target "$(uname -m)-apple-macos13.0" macos/main.swift
 fi

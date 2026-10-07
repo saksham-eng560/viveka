@@ -11,10 +11,10 @@ function walk(dir: string): string[] {
 }
 
 describe("manifest", () => {
-  it("is called Sheru", () => {
-    expect(manifest.name).toBe("Sheru");
-    expect(manifest.action.default_title).toBe("Sheru");
-    expect(manifest.description).toMatch(/Sheru/);
+  it("is called Viveka", () => {
+    expect(manifest.name).toBe("Viveka");
+    expect(manifest.action.default_title).toBe("Viveka");
+    expect(manifest.description).toMatch(/Viveka/);
   });
 
   it("declares MV3 with the required permissions", () => {
@@ -31,7 +31,7 @@ describe("manifest", () => {
     expect(manifest.description).not.toMatch(/\bAI\b/);
   });
 
-  it("limits host permissions to local Ollama, ActivityWatch and Sheru's brain", () => {
+  it("limits host permissions to local Ollama, ActivityWatch and Leo's brain", () => {
     expect([...manifest.host_permissions].sort()).toEqual(
       [
         "http://127.0.0.1:11434/*",
@@ -44,8 +44,8 @@ describe("manifest", () => {
     );
   });
 
-  it("exposes only Sheru's picture to web pages", () => {
-    expect(manifest.web_accessible_resources).toEqual([{ resources: ["sheru.svg"], matches: ["<all_urls>"] }]);
+  it("exposes only Leo's picture to web pages", () => {
+    expect(manifest.web_accessible_resources).toEqual([{ resources: ["leo.svg"], matches: ["<all_urls>"] }]);
   });
 
   it("wires popup, side panel, content script and a stable public key", () => {

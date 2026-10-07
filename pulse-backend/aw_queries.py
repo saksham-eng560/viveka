@@ -168,7 +168,7 @@ async def fetch_aw_events(settings: Settings, start: dt.datetime, end: dt.dateti
 
 
 def local_events(settings: Settings, start: dt.datetime, end: dt.datetime) -> list[Event]:
-    """Whole-computer activity logged by Sheru's coach (desktop app + extension)."""
+    """Whole-computer activity logged by Leo's coach (desktop app + extension)."""
     store = ActivityStore(settings.data_dir)
     if not store.path.exists():
         return []
@@ -184,7 +184,7 @@ def local_events(settings: Settings, start: dt.datetime, end: dt.datetime) -> li
 async def fetch_events(settings: Settings, date: dt.date, tz: Optional[str]) -> tuple[list[Event], Source]:
     """Resolve events for a day according to DATA_SOURCE (aw / sample / local / auto).
 
-    auto: Sheru's local log if it has anything for the day, else ActivityWatch, else sample data.
+    auto: Leo's local log if it has anything for the day, else ActivityWatch, else sample data.
     """
     start, end = day_window(date, tz)
     if settings.data_source == "sample":

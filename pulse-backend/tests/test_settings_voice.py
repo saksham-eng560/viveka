@@ -1,4 +1,4 @@
-"""Settings tab API, the coach honouring settings, and Sheru's voice."""
+"""Settings tab API, the coach honouring settings, and Leo's voice."""
 from __future__ import annotations
 
 import random
@@ -13,7 +13,7 @@ from activity_store import ActivityStore
 from coach import PACES, Coach, DesktopSample
 from config import get_settings
 from persona import Brain
-from profile_store import ProfileIn, ProfileStore, SheruSettings
+from profile_store import ProfileIn, ProfileStore, LeoSettings
 from tests.test_buddy_api import PROFILE
 from tests.test_coach import Clock, chrome_on, run, vscode
 
@@ -86,7 +86,7 @@ def coach_with(tmp_path: Any, clock: Clock, **settings: Any) -> Coach:
     profiles.save(ProfileIn(name="Saksham", goals=["Crack DSA"], work_tools=["vscode"], distractions=["instagram", "youtube"],
                             pace="demo", quotes=settings.pop("quotes", "sometimes")))
     if settings:
-        base = SheruSettings().model_dump()
+        base = LeoSettings().model_dump()
         for k, v in settings.items():
             base[k] = {**base[k], **v} if isinstance(v, dict) else v
         profiles.update(settings=base)
@@ -218,11 +218,28 @@ def test_say_endpoint_503_when_no_engine(client: TestClient, tmp_path: Any) -> N
 def test_legacy_db_name_is_migrated(tmp_path: Any) -> None:
     (tmp_path / "lighthouse.db").write_bytes(b"")
     store = ActivityStore(tmp_path)
-    assert store.path.name == "sheru.db" and store.path.exists() and not (tmp_path / "lighthouse.db").exists()
+    assert store.path.name == "viveka.db" and store.path.exists() and not (tmp_path / "lighthouse.db").exists()
 
 
 def test_env_aliases(env: Any, tmp_path: Any) -> None:
     import config
 
-    env(SHERU_DATA_DIR=str(tmp_path / "new"))
+    env(VIVEKA_DATA_DIR=str(tmp_path / "new"))
     assert config.get_settings().data_dir == str(tmp_path / "new")
+
+
+def test_previous_db_name_is_migrated_too(tmp_path: Any) -> None:
+    (tmp_path / "sheru.db").write_bytes(b"")
+    store = ActivityStore(tmp_path)
+    assert store.path.name == "viveka.db" and store.path.exists() and not (tmp_path / "sheru.db").exists()
+
+
+def test_older_env_names_still_work(env: Any, tmp_path: Any, monkeypatch: pytest.MonkeyPatch) -> None:
+    import config
+
+    monkeypatch.delenv("VIVEKA_DATA_DIR", raising=False)
+    env(SHERU_DATA_DIR=str(tmp_path / "sheru-era"))
+    assert config.get_settings().data_dir == str(tmp_path / "sheru-era")
+    monkeypatch.delenv("SHERU_DATA_DIR")
+    env(LIGHTHOUSE_DATA_DIR=str(tmp_path / "lighthouse-era"))
+    assert config.get_settings().data_dir == str(tmp_path / "lighthouse-era")
